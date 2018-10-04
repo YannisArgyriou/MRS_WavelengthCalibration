@@ -106,6 +106,12 @@ def FM_MTS_BB_extended_source(lvl2path,band,bb_temp=None,output='img'):
         sci_data,bkg_data = hdulist_sci[0].data[0,:,:],hdulist_bkg[0].data[0,:,:]
         hdulist_sci.close() ; hdulist_bkg.close()
         return sci_data,bkg_data
+    elif output == 'img_error':
+        from astropy.io import fits
+        hdulist_sci,hdulist_bkg = fits.open(sci_imgs[band]), fits.open(bkg_imgs[band])
+        sci_data,bkg_data = hdulist_sci[0].data[1,:,:],hdulist_bkg[0].data[1,:,:]
+        hdulist_sci.close() ; hdulist_bkg.close()
+        return sci_data,bkg_data
 
 def MIRI_internal_calibration_source(lvl2path,band,campaign=None,output='img'):
     # MRS_RAD_11 (MRS Calibration Source)
@@ -309,33 +315,33 @@ def FM_MTS_800K_BB_extended_source_through_etalon(lvl2path,band,etalon=None,outp
         return sci_data,bkg_data
 
 def FM_MTS_800K_BB_extended_source_through_etalon_through_pinhole(lvl2path,band,etalon=None,output='img'):
-    # MRS_OPT_02 (MRS Image Quality)
+    # MRS_OPT_06 (MRS Image Quality)
     if etalon == 'ET1A':
-        sci_imgs = {"1A":lvl2path +'FM1T00012163/MIRFM1T00012163_1_495_SE_2011-06-25T08h53m56_LVL2.fits',
+        sci_imgs = {"1A":lvl2path +'FM1T00012175/MIRFM1T00012175_1_495_SE_2011-06-26T20h22m07_LVL2.fits',
                     "1B":lvl2path +'FM1T00012846/MIRFM1T00012846_1_495_SE_2011-07-11T00h02m43_LVL2.fits',
-                    "1C":lvl2path +'',
-                    "2A":lvl2path +'',
-                    "2B":lvl2path +'',
-                    "2C":lvl2path +'',
-                    "3A":lvl2path +'',
-                    "3B":lvl2path +'',
-                    "3C":lvl2path +'',
-                    "4A":lvl2path +'',
-                    "4B":lvl2path +'',
-                    "4C":lvl2path +''}
+                    "1C":lvl2path +'FM1T00012937/MIRFM1T00012937_1_495_SE_2011-07-13T07h20m26_LVL2.fits',
+                    "2A":lvl2path +'FM1T00012175/MIRFM1T00012175_1_495_SE_2011-06-26T20h22m07_LVL2.fits',
+                    "2B":lvl2path +'FM1T00012846/MIRFM1T00012846_1_495_SE_2011-07-11T00h02m43_LVL2.fits',
+                    "2C":lvl2path +'FM1T00012937/MIRFM1T00012937_1_495_SE_2011-07-13T07h20m26_LVL2.fits',
+                    "3A":lvl2path +'FM1T00012175/MIRFM1T00012175_1_494_SE_2011-06-26T20h21m53_LVL2.fits',
+                    "3B":lvl2path +'FM1T00012846/MIRFM1T00012846_1_494_SE_2011-07-11T00h02m28_LVL2.fits',
+                    "3C":lvl2path +'FM1T00012937/MIRFM1T00012937_1_494_SE_2011-07-13T07h20m12_LVL2.fits',
+                    "4A":lvl2path +'FM1T00012175/MIRFM1T00012175_1_494_SE_2011-06-26T20h21m53_LVL2.fits',
+                    "4B":lvl2path +'FM1T00012846/MIRFM1T00012846_1_494_SE_2011-07-11T00h02m28_LVL2.fits',
+                    "4C":lvl2path +'FM1T00012937/MIRFM1T00012937_1_494_SE_2011-07-13T07h20m12_LVL2.fits'}
 
-        bkg_imgs = {"1A":lvl2path +'',
-                    "1B":lvl2path +'',
-                    "1C":lvl2path +'',
-                    "2A":lvl2path +'',
-                    "2B":lvl2path +'',
-                    "2C":lvl2path +'',
-                    "3A":lvl2path +'',
-                    "3B":lvl2path +'',
-                    "3C":lvl2path +'',
-                    "4A":lvl2path +'',
-                    "4B":lvl2path +'',
-                    "4C":lvl2path +''}
+        bkg_imgs = {"1A":lvl2path +'FM1T00012179/MIRFM1T00012179_1_495_SE_2011-06-27T06h45m05_LVL2.fits',
+                    "1B":lvl2path +'FM1T00012844/MIRFM1T00012844_1_495_SE_2011-07-10T23h24m47_LVL2.fits',
+                    "1C":lvl2path +'FM1T00012945/MIRFM1T00012945_1_495_SE_2011-07-13T16h03m06_LVL2.fits',
+                    "2A":lvl2path +'FM1T00012179/MIRFM1T00012179_1_495_SE_2011-06-27T06h45m05_LVL2.fits',
+                    "2B":lvl2path +'FM1T00012844/MIRFM1T00012844_1_495_SE_2011-07-10T23h24m47_LVL2.fits',
+                    "2C":lvl2path +'FM1T00012945/MIRFM1T00012945_1_495_SE_2011-07-13T16h03m06_LVL2.fits',
+                    "3A":lvl2path +'FM1T00012179/MIRFM1T00012179_1_494_SE_2011-06-27T06h44m51_LVL2.fits',
+                    "3B":lvl2path +'FM1T00012844/MIRFM1T00012844_1_494_SE_2011-07-10T23h24m32_LVL2.fits',
+                    "3C":lvl2path +'FM1T00012945/MIRFM1T00012945_1_494_SE_2011-07-13T16h02m52_LVL2.fits',
+                    "4A":lvl2path +'FM1T00012179/MIRFM1T00012179_1_494_SE_2011-06-27T06h44m51_LVL2.fits',
+                    "4B":lvl2path +'FM1T00012844/MIRFM1T00012844_1_494_SE_2011-07-10T23h24m32_LVL2.fits',
+                    "4C":lvl2path +'FM1T00012945/MIRFM1T00012945_1_494_SE_2011-07-13T16h02m52_LVL2.fits'}
     elif etalon == 'ET1B':
         sci_imgs = {"1A":lvl2path +'',
                     "1B":lvl2path +'',
@@ -419,9 +425,9 @@ def FM_MTS_800K_BB_extended_source_through_etalon_through_pinhole(lvl2path,band,
     elif output == 'img':
         from astropy.io import fits
         hdulist_sci = fits.open(sci_imgs[band])
-        # hdulist_bkg = fits.open(bkg_imgs[band])
-        sci_data,bkg_data = hdulist_sci[0].data[0,:,:],0 # hdulist_bkg[0].data[0,:,:]
-        hdulist_sci.close() # ; hdulist_bkg.close()
+        hdulist_bkg = fits.open(bkg_imgs[band])
+        sci_data,bkg_data = hdulist_sci[0].data[0,:,:], hdulist_bkg[0].data[0,:,:]
+        hdulist_sci.close() ; hdulist_bkg.close()
         return sci_data,bkg_data
 
 def RAL_FTS_ET_observations(obsDir,etalon=None):
@@ -479,9 +485,61 @@ def FM_MTS_800K_BB_MRS_RAD_06_raster(lvl2path,band,output='img'):
     elif output == 'img':
         from astropy.io import fits
         hdulist_sci = fits.open(sci_imgs[band])
-        # hdulist_bkg = fits.open(bkg_imgs[band])
-        sci_data,bkg_data = hdulist_sci[0].data[0,:,:],0 # hdulist_bkg[0].data[0,:,:]
-        hdulist_sci.close() # ; hdulist_bkg.close()
+        hdulist_bkg = fits.open(bkg_imgs[band])
+        sci_data,bkg_data = hdulist_sci[0].data[0,:,:], hdulist_bkg[0].data[0,:,:]
+        hdulist_sci.close(); hdulist_bkg.close()
+        return sci_data,bkg_data
+
+def FM_MTS_800K_BB_MRS_RAD_08(lvl2path,band,wp_filter=None,output='img'):
+    # MRS Out of band radiation sensitivity
+    if wp_filter == 'LWP':
+        sci_imgs = {"1A":lvl2path +'FM1T00010838/MIRFM1T00010838_1_495_SE_2011-05-17T19h15m39_LVL2.fits',
+                    "1B":lvl2path +'FM1T00010838/MIRFM1T00010838_4_495_SE_2011-05-17T19h47m12_LVL2.fits',
+                    "1C":lvl2path +'FM1T00010838/MIRFM1T00010838_7_495_SE_2011-05-17T20h19m18_LVL2.fits',
+                    "2A":lvl2path +'FM1T00010838/MIRFM1T00010838_1_495_SE_2011-05-17T19h15m39_LVL2.fits',
+                    "2B":lvl2path +'FM1T00010838/MIRFM1T00010838_4_495_SE_2011-05-17T19h47m12_LVL2.fits',
+                    "2C":lvl2path +'FM1T00010838/MIRFM1T00010838_7_495_SE_2011-05-17T20h19m18_LVL2.fits',
+                    "3A":lvl2path +'FM1T00010838/MIRFM1T00010838_1_494_SE_2011-05-17T19h15m33_LVL2.fits',
+                    "3B":lvl2path +'FM1T00010838/MIRFM1T00010838_4_494_SE_2011-05-17T19h47m06_LVL2.fits',
+                    "3C":lvl2path +'FM1T00010838/MIRFM1T00010838_7_494_SE_2011-05-17T20h19m12_LVL2.fits',
+                    "4A":lvl2path +'FM1T00010838/MIRFM1T00010838_1_494_SE_2011-05-17T19h15m33_LVL2.fits',
+                    "4B":lvl2path +'FM1T00010838/MIRFM1T00010838_4_494_SE_2011-05-17T19h47m06_LVL2.fits',
+                    "4C":lvl2path +'FM1T00010838/MIRFM1T00010838_7_494_SE_2011-05-17T20h19m12_LVL2.fits'}
+
+    elif wp_filter == 'SWP':
+        sci_imgs = {"1A":lvl2path +'FM1T00010838/MIRFM1T00010838_2_495_SE_2011-05-17T19h25m57_LVL2.fits',
+                    "1B":lvl2path +'FM1T00010838/MIRFM1T00010838_5_495_SE_2011-05-17T19h57m37_LVL2.fits',
+                    "1C":lvl2path +'FM1T00010838/MIRFM1T00010838_8_495_SE_2011-05-17T20h29m38_LVL2.fits',
+                    "2A":lvl2path +'FM1T00010838/MIRFM1T00010838_2_495_SE_2011-05-17T19h25m57_LVL2.fits',
+                    "2B":lvl2path +'FM1T00010838/MIRFM1T00010838_5_495_SE_2011-05-17T19h57m37_LVL2.fits',
+                    "2C":lvl2path +'FM1T00010838/MIRFM1T00010838_8_495_SE_2011-05-17T20h29m38_LVL2.fits',
+                    "3A":lvl2path +'FM1T00010838/MIRFM1T00010838_2_494_SE_2011-05-17T19h25m51_LVL2.fits',
+                    "3B":lvl2path +'FM1T00010838/MIRFM1T00010838_5_494_SE_2011-05-17T19h57m31_LVL2.fits',
+                    "3C":lvl2path +'FM1T00010838/MIRFM1T00010838_8_494_SE_2011-05-17T20h29m32_LVL2.fits',
+                    "4A":lvl2path +'FM1T00010838/MIRFM1T00010838_2_494_SE_2011-05-17T19h25m51_LVL2.fits',
+                    "4B":lvl2path +'FM1T00010838/MIRFM1T00010838_5_494_SE_2011-05-17T19h57m31_LVL2.fits',
+                    "4C":lvl2path +'FM1T00010838/MIRFM1T00010838_8_494_SE_2011-05-17T20h29m32_LVL2.fits'}
+
+    bkg_imgs = {"1A":lvl2path +'FM1T00010838/MIRFM1T00010838_3_495_SE_2011-05-17T19h35m52_LVL2.fits',
+                "1B":lvl2path +'FM1T00010838/MIRFM1T00010838_6_495_SE_2011-05-17T20h08m03_LVL2.fits',
+                "1C":lvl2path +'FM1T00010838/MIRFM1T00010838_9_495_SE_2011-05-17T20h40m04_LVL2.fits',
+                "2A":lvl2path +'FM1T00010838/MIRFM1T00010838_3_495_SE_2011-05-17T19h35m52_LVL2.fits',
+                "2B":lvl2path +'FM1T00010838/MIRFM1T00010838_6_495_SE_2011-05-17T20h08m03_LVL2.fits',
+                "2C":lvl2path +'FM1T00010838/MIRFM1T00010838_9_495_SE_2011-05-17T20h40m04_LVL2.fits',
+                "3A":lvl2path +'FM1T00010838/MIRFM1T00010838_3_494_SE_2011-05-17T19h35m46_LVL2.fits',
+                "3B":lvl2path +'FM1T00010838/MIRFM1T00010838_6_494_SE_2011-05-17T20h07m57_LVL2.fits',
+                "3C":lvl2path +'FM1T00010838/MIRFM1T00010838_9_494_SE_2011-05-17T20h39m58_LVL2.fits',
+                "4A":lvl2path +'FM1T00010838/MIRFM1T00010838_3_494_SE_2011-05-17T19h35m46_LVL2.fits',
+                "4B":lvl2path +'FM1T00010838/MIRFM1T00010838_6_494_SE_2011-05-17T20h07m57_LVL2.fits',
+                "4C":lvl2path +'FM1T00010838/MIRFM1T00010838_9_494_SE_2011-05-17T20h39m58_LVL2.fits'}
+    if output == 'filename':
+        return sci_imgs[band],bkg_imgs[band]
+    elif output == 'img':
+        from astropy.io import fits
+        hdulist_sci = fits.open(sci_imgs[band])
+        hdulist_bkg = fits.open(bkg_imgs[band])
+        sci_data,bkg_data = hdulist_sci[0].data[0,:,:], hdulist_bkg[0].data[0,:,:]
+        hdulist_sci.close(); hdulist_bkg.close()
         return sci_data,bkg_data
 
 def FM_MTS_800K_BB_MRS_OPT_01_raster(lvl2path,pointing='all',output='img'):
@@ -711,7 +769,7 @@ def FM_MTS_800K_BB_MRS_OPT_08(lvl2path,wp_filter=None,output='img'):
 
 
 #-- CV1RR & CV2 & CV3 data
-def CV_800K_BB_MRS_OPT_02_obs(dataDir,campaign=None,pointing='all',output='img'):
+def CV_800K_BB_MRS_OPT_02_obs(dataDir,band,campaign=None,pointing='all',output='img'):
     """ load MIRIM PSFs band 1A/2A"""
     import os
     import glob
@@ -720,6 +778,7 @@ def CV_800K_BB_MRS_OPT_02_obs(dataDir,campaign=None,pointing='all',output='img')
     subchannels = ['SHORT','MED','LONG']
     MIRIMPSF_dictionary = {}
     if campaign == 'CV2':
+        # 16 pointings in total
         pointings = ['P'+str(i) for i in range(17)]
         for point in pointings:
             mylist = []
@@ -731,11 +790,18 @@ def CV_800K_BB_MRS_OPT_02_obs(dataDir,campaign=None,pointing='all',output='img')
             return MIRIMPSF_dictionary
         elif (pointing != 'all') & (output=='img'):
             from astropy.io import fits
-            hdulist_sci,hdulist_bkg = fits.open(dataDir+MIRIMPSF_dictionary[campaign+'_'+pointing][1]), fits.open(dataDir+MIRIMPSF_dictionary[campaign+'_'+pointing][3])
+            if band in ['1A','2A']: sci_idx = 1
+            elif band in ['1B','2B']:sci_idx = 5
+            elif band in ['1C','2C']:sci_idx = 9
+            elif band in ['3A','4A']:sci_idx = 0
+            elif band in ['3B','4B']:sci_idx = 4
+            elif band in ['3C','4C']:sci_idx = 8
+            hdulist_sci,hdulist_bkg = fits.open(dataDir+MIRIMPSF_dictionary[campaign+'_'+pointing][sci_idx]), fits.open(dataDir+MIRIMPSF_dictionary[campaign+'_'+pointing][sci_idx+2])
             sci_data,bkg_data = hdulist_sci[0].data[0,:,:],hdulist_bkg[0].data[0,:,:]
             hdulist_sci.close() ; hdulist_bkg.close()
             return sci_data,bkg_data
     elif campaign == 'CV3':
+        # 16 pointings in total
         pointings = ['Q'+str(i) for i in range(17)]
         for point in pointings:
             sub = 'MIRM103-{}-SHORT'.format(point)
@@ -744,12 +810,15 @@ def CV_800K_BB_MRS_OPT_02_obs(dataDir,campaign=None,pointing='all',output='img')
             return MIRIMPSF_dictionary
         elif (pointing != 'all') & (output=='img'):
             from astropy.io import fits
-            hdulist_sci,hdulist_bkg = fits.open(dataDir+MIRIMPSF_dictionary[campaign+'_'+pointing][1]), fits.open(dataDir+MIRIMPSF_dictionary[campaign+'_'+pointing][3])
+            if band in ['1A','2A']: sci_idx = 1
+            elif band in ['3A','4A']:sci_idx = 0
+            hdulist_sci,hdulist_bkg = fits.open(dataDir+MIRIMPSF_dictionary[campaign+'_'+pointing][sci_idx]), fits.open(dataDir+MIRIMPSF_dictionary[campaign+'_'+pointing][sci_idx+2])
             sci_data,bkg_data = hdulist_sci[0].data[0,:,:],hdulist_bkg[0].data[0,:,:]
             hdulist_sci.close() ; hdulist_bkg.close()
             return sci_data,bkg_data
         """
         Dictionary keys are equivalent to PSF measurements in CV2 and CV3 tests (with different pointings).
+
         Dictionary indeces within keys, for CV2 obs. are equivalent to:
         [0,1,2,3] : SHORT_494,SHORT_495,SHORTB_494,SHORTB_495
         [4,5,6,7] : MED_494,MED_495,MEDB_494,MEDB_495
@@ -789,6 +858,7 @@ def CV_800K_BB_MRS_OPT_02_obs(dataDir,campaign=None,pointing='all',output='img')
 #-- OTIS campaign
 def OTIS_ASPA_semiextended_source(lvl2path,band,pointing=None,output='img'):
     if pointing == 'v03':
+        # source centroid is at a higher beta value
         sci_imgs = {"1A":lvl2path +'MIRM32313-SS-V03-7249024654_1_495_SE_2017-09-06T02h54m21_LVL2.fits',
                     "1B":lvl2path +'MIRM32313-MM-V03-7249025513_1_495_SE_2017-09-06T03h03m01_LVL2.fits',
                     "1C":lvl2path +'MIRM32313-LL-V03-7249030323_1_495_SE_2017-09-06T03h08m31_LVL2.fits',
@@ -815,6 +885,7 @@ def OTIS_ASPA_semiextended_source(lvl2path,band,pointing=None,output='img'):
                     "4B":lvl2path +'MIRM32313-MM-V03B-7249025018_1_494_SE_2017-09-06T02h57m31_LVL2.fits',
                     "4C":lvl2path +'MIRM32313-LL-V03B-7249025837_1_494_SE_2017-09-06T03h05m21_LVL2.fits'}
     elif pointing == 'v05':
+        # source centroid is at a lower beta value
         sci_imgs = {"1A":lvl2path +'MIRM32313-SS-V05-7249031538_1_495_SE_2017-09-06T03h23m41_LVL2.fits',
                     "1B":lvl2path +'MIRM32313-MM-V05-7249032353_1_495_SE_2017-09-06T03h31m21_LVL2.fits',
                     "1C":lvl2path +'MIRM32313-LL-V05-7249033205_1_495_SE_2017-09-06T03h37m41_LVL2.fits',

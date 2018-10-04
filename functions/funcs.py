@@ -3,6 +3,7 @@
 # import python modules
 import os
 import pickle
+import itertools
 import numpy as np
 import scipy.special as sp
 from scipy.optimize import curve_fit
@@ -40,8 +41,13 @@ def get_cdps(band,cdpDir,output='img'):
     resol_file = os.path.join(cdpDir,\
       'MIRI_FM_%s_%s_RESOL_7B.00.00.fits' % (detnick,resol_subchan_name))
 
+    # photon-conversion efficiency (PCE)
+    pce_subchan_name = band[0]+subchan_names[band[1]]
+    pce_file = os.path.join(cdpDir,\
+      'MIRI_FM_%s_%s_PCE_06.00.00.fits' % (detnick,pce_subchan_name))
+
     if output == 'filepath':
-        return fringe_file,photom_file,psf_file,resol_file
+        return fringe_file,photom_file,psf_file,resol_file,pce_file
     elif output == 'img':
         from astropy.io import fits
         fringe_img     = fits.open(fringe_file)[1].data        # [unitless]
@@ -49,7 +55,13 @@ def get_cdps(band,cdpDir,output='img'):
         pixsiz_img     = fits.open(photom_file)[5].data        # [arcsec^2/pix]
         psffits        = fits.open(psf_file)                   # [unitless]
         specres_table  = fits.open(resol_file)[1].data         # [unitless]
-        return fringe_img,photom_img,pixsiz_img,psffits,specres_table
+        pce_table      = fits.open(pce_file)[1].data
+        return fringe_img,photom_img,pixsiz_img,psffits,specres_table,pce_table
+    elif output == 'img_error':
+        from astropy.io import fits
+        fringe_img_error = fits.open(fringe_file)[2].data        # [unitless]
+        photom_img_error = fits.open(photom_file)[2].data        # [DN/s * pixel/mJy]
+        return fringe_img_error,photom_img_error
 
 # import MIRIM PSFs
 def mirimpsfs(workDir=None):
@@ -111,7 +123,7 @@ def Shepard2DKernel(R, k):
     w[d==0]=0
     return w
 
-def straylightCorrection(sci_img,sliceMap,R=50, k=1):
+def straylightCorrection(sci_img,sliceMap,R=50, k=1, output='source'):
     from astropy.convolution import convolve, Box2DKernel
     """
     Applies a modified version of the Shepard algorithm to remove straylight from the MIRI MRS detector
@@ -128,7 +140,7 @@ def straylightCorrection(sci_img,sliceMap,R=50, k=1):
     img_gap = sci_img*mask
 
     # img_gap[img_gap>0.02*np.max(sci_img[sliceMap>0])] = 0 # avoid cosmic rays contaminating result
-    # img_gap[img_gap<0] = 0 # set pixels less than zero to 0
+    img_gap[img_gap<0] = 0 # set pixels less than zero to 0
     img_gap = convolve(img_gap, Box2DKernel(3)) # smooth gap pixels with Boxkernel
     img_gap*=mask # reset sci pixels to 0
     # convolve gap pixel img with weight kernel
@@ -138,7 +150,10 @@ def straylightCorrection(sci_img,sliceMap,R=50, k=1):
     astropy_conv /= norm_conv
     # reinstate gap pixels to previous values
     #astropy_conv[sliceMap==0] = img_gap[sliceMap==0]
-    return sci_img-astropy_conv
+    if output=='source':
+        return sci_img-astropy_conv
+    elif output=='straylight':
+        return astropy_conv
 
 def straylightManga(band,sci_img,err_img,sliceMap,det_dims=(1024,1032)):
     from scipy.interpolate import splrep,BSpline
@@ -281,9 +296,32 @@ def getSpecR(lamb0=None,band=None,specres_table=None):
 
 def getSpecR_linearR(lamb0=None,band=None):
     """Return spectral resolution (a.k.a. resolving power) assuming a linear relation to wavelength"""
-    import mrs_aux as maux
-    bandlims = maux.MRS_bands[band]
-    Rlims = maux.MRS_R[band]
+    MRS_bands = {'1A':[4.83,5.82],
+        '1B':[5.62,6.73],
+        '1C':[6.46,7.76],
+        '2A':[7.44,8.90],
+        '2B':[8.61,10.28],
+        '2C':[9.94,11.87],
+        '3A':[11.47,13.67],
+        '3B':[13.25,15.80],
+        '3C':[15.30,18.24],
+        '4A':[17.54,21.10],
+        '4B':[20.44,24.72],
+        '4C':[23.84,28.82]} # microns
+    MRS_R = {'1A':[3320.,3710.],
+        '1B':[3190.,3750.],
+        '1C':[3100.,3610.],
+        '2A':[2990.,3110.],
+        '2B':[2750.,3170.],
+        '2C':[2860.,3300.],
+        '3A':[2530.,2880.],
+        '3B':[1790.,2640.],
+        '3C':[1980.,2790.],
+        '4A':[1460.,1930.],
+        '4B':[1680.,1770.],
+        '4C':[1630.,1330.]} # R = lambda / delta_lambda
+    bandlims = MRS_bands[band]
+    Rlims = MRS_R[band]
     specR = (Rlims[1]-Rlims[0])/(bandlims[1]-bandlims[0]) * (lamb0-bandlims[0]) + Rlims[0]
     return specR
 
@@ -360,14 +398,16 @@ def spectral_gridding_linearR(band=None,d2cMaps=None,oversampling = 1.):
     return np.array(lambcens),np.array(lambfwhms)
 
 def point_source_centroiding(band,sci_img,d2cMaps,spec_grid=None,fit='2D',center=None):
-    import mrs_aux as maux
     # distortion maps
     sliceMap  = d2cMaps['sliceMap']
     lambdaMap = d2cMaps['lambdaMap']
     alphaMap  = d2cMaps['alphaMap']
     betaMap   = d2cMaps['betaMap']
     nslices   = d2cMaps['nslices']
-    mrs_fwhm  = maux.MRS_FWHM[band[0]]
+    MRS_alphapix = {'1':0.196,'2':0.196,'3':0.245,'4':0.273} # arcseconds
+    MRS_FWHM = {'1':2.16*MRS_alphapix['1'],'2':3.30*MRS_alphapix['2'],
+                '3':4.04*MRS_alphapix['3'],'4':5.56*MRS_alphapix['4']} # MRS PSF
+    mrs_fwhm  = MRS_FWHM[band[0]]
     lambcens,lambfwhms = spec_grid[0],spec_grid[1]
     unique_betas = np.sort(np.unique(betaMap[(sliceMap>100*int(band[0])) & (sliceMap<100*(int(band[0])+1))]))
     fov_lims  = [alphaMap[np.nonzero(lambdaMap)].min(),alphaMap[np.nonzero(lambdaMap)].max()]
@@ -387,9 +427,11 @@ def point_source_centroiding(band,sci_img,d2cMaps,spec_grid=None,fit='2D',center
         sel = (sliceMap == 100*int(band[0])+source_center_slice)
         img[sel]  = sci_img[sel]
 
-        first_nonzero_row = 0
-        while all(img[first_nonzero_row,:][~np.isnan(img[first_nonzero_row,:])] == 0.): first_nonzero_row+=1
-        source_center_alpha = alphaMap[first_nonzero_row,img[first_nonzero_row,:].argmax()]
+        source_center_alphas = []
+        for row in range(det_dims[0]):
+            source_center_alphas.append(alphaMap[row,img[row,:].argmax()])
+        source_center_alphas = np.array(source_center_alphas)
+        source_center_alpha  = np.average(source_center_alphas[~np.isnan(source_center_alphas)])
     else:
         source_center_slice,source_center_alpha = center[0],center[1]
     # summary:
@@ -480,17 +522,19 @@ def point_source_centroiding(band,sci_img,d2cMaps,spec_grid=None,fit='2D',center
 
         return sign_amp2D,alpha_centers2D,beta_centers2D,sigma_alpha2D,sigma_beta2D,bkg_amp2D
 
-def point_source_along_slice_centroiding(sci_img,band,d2cMaps,spec_grid=None,offset_slice=0,campaign=None,verbose=False):
+def point_source_along_slice_centroiding(band,sci_img,d2cMaps,spec_grid=None,offset_slice=0,campaign=None):
     # same as "point_source_centroiding" function, however only performs 1D Gaussian fitting, in along-slice (alpha) direction
     # param. "offset slice" allows to perform the centroiding analysis in a neighboring slice
-    import mrs_aux as maux
     # distortion maps
     sliceMap  = d2cMaps['sliceMap']
     lambdaMap = d2cMaps['lambdaMap']
     alphaMap  = d2cMaps['alphaMap']
     betaMap   = d2cMaps['betaMap']
-    nslices   = maux.MRS_nslices[band[0]]
-    mrs_fwhm  = maux.MRS_FWHM[band[0]]
+    nslices   = d2cMaps['nslices']
+    MRS_alphapix = {'1':0.196,'2':0.196,'3':0.245,'4':0.273} # arcseconds
+    MRS_FWHM = {'1':2.16*MRS_alphapix['1'],'2':3.30*MRS_alphapix['2'],
+                '3':4.04*MRS_alphapix['3'],'4':5.56*MRS_alphapix['4']} # MRS PSF
+    mrs_fwhm  = MRS_FWHM[band[0]]
     lambcens,lambfwhms = spec_grid[0],spec_grid[1]
     unique_betas = np.sort(np.unique(betaMap[(sliceMap>100*int(band[0])) & (sliceMap<100*(int(band[0])+1))]))
     fov_lims  = [alphaMap[np.nonzero(lambdaMap)].min(),alphaMap[np.nonzero(lambdaMap)].max()]
@@ -503,8 +547,7 @@ def point_source_along_slice_centroiding(sci_img,band,d2cMaps,spec_grid=None,off
     source_center_slice = np.argmax(sum_signals)+1
     source_center_slice+=offset_slice
 
-    if verbose==True:
-        print 'Slice {} has the largest summed flux'.format(source_center_slice)
+    print 'Slice {} has the largest summed flux'.format(source_center_slice)
 
     # along-slice center:
     det_dims = (1024,1032)
@@ -531,6 +574,9 @@ def point_source_along_slice_centroiding(sci_img,band,d2cMaps,spec_grid=None,off
         alpha_sigmas[ibin]  = np.abs(popt[2])
         bkg_amps[ibin]      = popt[3]
 
+    print 'The following bins failed to converge:'
+    print failed_fits
+
     # omit outliers
     for i in xrange(len(np.diff(sign_amps))):
         if np.abs(np.diff(alpha_centers)[i]) > 0.05:
@@ -540,7 +586,7 @@ def point_source_along_slice_centroiding(sci_img,band,d2cMaps,spec_grid=None,off
             if np.abs(np.diff(sign_amps)[i]) > 10.:
                 sign_amps[i],sign_amps[i+1],alpha_centers[i],alpha_centers[i+1],alpha_sigmas[i],alpha_sigmas[i+1],bkg_amps[i],bkg_amps[i+1] = [np.nan for j in range(8)]
 
-    return source_center_slice,sign_amps,alpha_centers,alpha_sigmas,bkg_amps
+    return sign_amps,alpha_centers,source_center_slice,alpha_sigmas,bkg_amps
 
 def get_pixel_spatial_area(band=None,d2cMaps=None):
     # Calculate size map
@@ -665,44 +711,24 @@ def aperture_photometry_point_source(band,sci_img,apertureMask,aperture_area,d2c
 
     return signals_aper
 
-# def aperture_photometry_point_source(sci_img,pixsiz_img,apertureMask,d2cMaps,spec_grid=None,img_type='sci'):
-#     lambdaMap = d2cMaps['lambdaMap']
-#     lambcens,lambfwhms = spec_grid[0],spec_grid[1]
-#
-#     signals_aper = np.zeros(len(lambcens))
-#     if img_type == 'sci':
-#         # psf_copy = psf.copy()
-#         for ibin in range(len(lambcens)):
-#             # # map containing only pixels within one spectral bin, omitting NaNs
-#             # pixelsInBinNoNaN = np.where((np.abs(lambdaMap-lambcens[ibin])<lambfwhms[ibin]/2.) & (np.isnan(psf)==False) )
-#             # # Normalize psf in bin so that the peak is at a value of 1.
-#             # psf_copy[pixelsInBinNoNaN] /= psf[pixelsInBinNoNaN].max()
-#
-#             # map containing only pixels within one spectral bin, within the defined aperture, omitting NaNs
-#             pixelsInBinInApertureNoNaN = np.where((np.abs(lambdaMap-lambcens[ibin])<lambfwhms[ibin]/2.) & (apertureMask!=0.) & (np.isnan(sci_img)==False) )
-#             # number of pixels in spectral bin and in aperture
-#             nPixels = len(pixelsInBinInApertureNoNaN[0])
-#             # map containing only pixels within one spectral bin, within the defined aperture
-#             sci_img_masked = sci_img[pixelsInBinInApertureNoNaN]*pixsiz_img[pixelsInBinInApertureNoNaN] #/psf_copy[pixelsInBinInApertureNoNaN]
-#             # perform aperture photometry
-#             signals_aper[ibin] = sci_img_masked.sum()/pixsiz_img[pixelsInBinInApertureNoNaN].sum() # /psf_copy[pixelsInBinInApertureNoNaN].sum()
-#
-#     if img_type == 'psf':
-#         sci_img_copy = sci_img.copy()
-#         for ibin in range(len(lambcens)):
-#             # map containing only pixels within one spectral bin, omitting NaNs
-#             pixelsInBinNoNaN = np.where((np.abs(lambdaMap-lambcens[ibin])<lambfwhms[ibin]/2.) & (np.isnan(sci_img_copy)==False) )
-#             # number of pixels in spectral bin
-#             nPixels = len(pixelsInBinNoNaN[0])
-#             # normalize the psf in a spectral bin by the total signal, normalized to the number of pixels in the spectral bin (not the same in all bins)
-#             sci_img_copy[pixelsInBinNoNaN] = sci_img_copy[pixelsInBinNoNaN]/nPixels/(sci_img_copy[pixelsInBinNoNaN]/nPixels).sum()
-#             # map containing only pixels within one spectral bin, within the defined aperture, omitting NaNs
-#             pixelsInBinInApertureNoNaN = np.where((np.abs(lambdaMap-lambcens[ibin])<lambfwhms[ibin]/2.) & (apertureMask!=0.) & (np.isnan(sci_img_copy)==False) )
-#             # map containing only pixels within one spectral bin, within the defined aperture
-#             sci_img_masked = sci_img_copy[pixelsInBinInApertureNoNaN]
-#             # perform aperture photometry
-#             signals_aper[ibin] = sci_img_masked.sum()
-#     return signals_aper
+def aperture_weighted_photometry_point_source(sci_img,weight_map,d2cMaps,spec_grid=None):
+    lambdaMap = d2cMaps['lambdaMap']
+    lambcens,lambfwhms = spec_grid[0],spec_grid[1]
+
+    copy_sci_img = sci_img.copy()
+    copy_sci_img[np.isnan(copy_sci_img)] = 0
+
+    signals_aper = np.zeros(len(lambcens))
+    for ibin in range(len(lambcens)):
+        # map containing only pixels within one spectral bin, within the defined aperture, omitting NaNs
+        pixelsInBin = np.where(np.abs(lambdaMap-lambcens[ibin])<lambfwhms[ibin]/2.)
+
+        # map containing only pixels within one spectral bin, within the defined aperture
+        sci_img_masked    = copy_sci_img[pixelsInBin]*weight_map[pixelsInBin]
+
+        # perform aperture photometry
+        signals_aper[ibin] = sci_img_masked.sum()
+    return signals_aper
 
 def aperture_photometry_extended_source(sci_img,apertureMask,aperture_area,d2cMaps=None,spec_grid=None):
     lambdaMap = d2cMaps['lambdaMap']
@@ -720,6 +746,56 @@ def aperture_photometry_extended_source(sci_img,apertureMask,aperture_area,d2cMa
 
         # perform aperture photometry
         signals_aper[ibin] = (sci_img_masked.sum()/nPixels) * aperture_area
+    return signals_aper
+
+def pixel_signal_contribution(d2cMaps,aperture,spec_grid=None):
+    from shapely.geometry import Polygon
+    print 'Pixel weight mapping'
+    lambcens,lambfwhms = spec_grid[0],spec_grid[1]
+    weight_map = np.zeros((1024,1032))
+    for ibin in range(len(lambcens)):
+        if ibin%100 == 0: print '{}/{} bins processed'.format(ibin,len(lambcens))
+        i,j = np.where(np.abs(d2cMaps['lambdaMap']-lambcens[ibin])<lambfwhms[ibin]/2.)
+        for pix in range(len(i)):
+            alphaUR = d2cMaps['alphaURMap'][i[pix],j[pix]]
+            alphaUL = d2cMaps['alphaULMap'][i[pix],j[pix]]
+            alphaLL = d2cMaps['alphaLLMap'][i[pix],j[pix]]
+            alphaLR = d2cMaps['alphaLRMap'][i[pix],j[pix]]
+
+            betaUR = d2cMaps['betaURMap'][i[pix],j[pix]]
+            betaUL = d2cMaps['betaULMap'][i[pix],j[pix]]
+            betaLL = d2cMaps['betaLLMap'][i[pix],j[pix]]
+            betaLR = d2cMaps['betaLRMap'][i[pix],j[pix]]
+
+            alphabetaUR = [alphaUR,betaUR]
+            alphabetaUL = [alphaUL,betaUL]
+            alphabetaLL = [alphaLL,betaLL]
+            alphabetaLR = [alphaLR,betaLR]
+
+            xy = [alphabetaUR, alphabetaUL, alphabetaLL, alphabetaLR]
+            polygon_shape = Polygon(xy)
+
+            weight_map[i[pix],j[pix]] = polygon_shape.intersection(aperture).area/polygon_shape.area
+    print '{}/{} bins processed'.format(len(lambcens),len(lambcens))
+    return weight_map
+
+def aperture_weighted_photometry_extended_source(sci_img,weight_map,aperture_area,d2cMaps=None,spec_grid=None):
+    lambdaMap = d2cMaps['lambdaMap']
+    lambcens,lambfwhms = spec_grid[0],spec_grid[1]
+
+    copy_sci_img = sci_img.copy()
+    copy_sci_img[np.isnan(copy_sci_img)] = 0
+
+    signals_aper = np.zeros(len(lambcens))
+    for ibin in range(len(lambcens)):
+        # map containing only pixels within one spectral bin, within the defined aperture, omitting NaNs
+        pixelsInBin = np.where((np.abs(lambdaMap-lambcens[ibin])<lambfwhms[ibin]/2.) )
+
+        # map containing only pixels within one spectral bin, within the defined aperture
+        sci_img_masked    = sci_img[pixelsInBin]*weight_map[pixelsInBin]
+
+        # perform aperture photometry
+        signals_aper[ibin] = (sci_img_masked.sum()/weight_map[pixelsInBin].sum()) * aperture_area
     return signals_aper
 
 def optimal_extraction(band,sci_img,err_img,psf,d2cMaps,spec_grid=None):
@@ -937,6 +1013,7 @@ def reflectivity_from_continuum(y):
 
 #--2d
 def gauss2d(xy, amp, x0, y0, sigma_x, sigma_y, base):
+    amp, x0, y0, sigma_x, sigma_y, base = float(amp),float(x0),float(y0),float(sigma_x),float(sigma_y),float(base)
     x, y = xy
     a = 1/(2*sigma_x**2)
     b = 1/(2*sigma_y**2)
@@ -954,13 +1031,36 @@ def voight_profile2d(xy,amp,x0,y0,sigma_x,sigma_y,f):
     L_nu = (2*amp/(np.pi*(sigma_x+sigma_y)))/(1+4*inner)
     return f*L_nu + (1-f)*G_nu
 
+def polyfit2d(x_s, x, y, z, order=3):
+    ncols = (order + 1)**2
+    G = np.zeros((x.size, ncols))
+    ij = itertools.product(range(order+1), range(order+1))
+    for k, (i,j) in enumerate(ij):
+        G[:,k] = (x-x_s)**j * y**i
+    m, _, _, _ = np.linalg.lstsq(G, z)
+    return m
+
+def convert_m_order2_to_order4(m):
+    m_new = np.array(list(m[:3])+[0,0]+list(m[3:6])+[0,0]+list(m[6:])+[0,0,0,0,0,0,0,0,0,0,0,0])
+    return m_new
+
+def polyval2d(x_s, x, y, m):
+    order = int(np.sqrt(len(m))) - 1
+    ij = itertools.product(range(order+1), range(order+1))
+    z = np.zeros_like(x)
+    for a, (i,j) in zip(m, ij):
+        z += a * (x-x_s)**j * y**i
+    return z
+
 #--etalon lines
 def fit_etalon_lines(x,y,peaks,fit_func='skewed_voight',sigma0=3.5,f0=0.5,a0=0.1):
     # Available fitting functions: 'gauss1d','skewnorm_func','voight_profile','skewed_voight'
     xdata = x.copy()
     xdata[np.isnan(xdata)] = 0.
+    # xdata[np.isinf(xdata)] = 0.
     ydata = y.copy()
     ydata[np.isnan(ydata)] = 0.
+    # ydata[np.isinf(ydata)] = 0.
 
     bounds_gauss = ([0,0,0],[np.inf,np.inf,np.inf])
     bounds_skewnorm = ([0,0,0,-np.inf],[np.inf,np.inf,np.inf,np.inf])
@@ -1015,7 +1115,7 @@ def fit_etalon_lines(x,y,peaks,fit_func='skewed_voight',sigma0=3.5,f0=0.5,a0=0.1
                     except RuntimeError:
                         popt,pcov = curve_fit(gauss1d_woBaseline,xdata[0:peak_idx+N],ydata[0:peak_idx+N],p0=guess_gauss,absolute_sigma=True,bounds=bounds_gauss)
                         fitting_flag.append('gauss1d')
-        elif len(ydata)-peak_idx<N:
+        elif peak_idx+N >= len(ydata):
             range_ini[i] = xdata[peak_idx-N]
             range_fin[i] = xdata[-1]
             if fit_func == 'gauss1d':
@@ -1071,6 +1171,15 @@ def fit_etalon_lines(x,y,peaks,fit_func='skewed_voight',sigma0=3.5,f0=0.5,a0=0.1
                 except RuntimeError:
                     popt,pcov = curve_fit(voight_profile,xdata[peak_idx-N:peak_idx+N],ydata[peak_idx-N:peak_idx+N],p0=guess_voight,absolute_sigma=True,bounds=bounds_voight)
                     fitting_flag.append('voight_profile')
+                except ValueError:
+                    try:
+                        sel = np.nonzero(ydata[peak_idx-N:peak_idx+N])
+                        popt,pcov = curve_fit(skewed_voight,xdata[peak_idx-N:peak_idx+N][sel],ydata[peak_idx-N:peak_idx+N][sel],p0=guess_skewvoight,absolute_sigma=True,bounds=bounds_skewvoight)
+                        fitting_flag.append('skewed_voight')
+                    except RuntimeError:
+                        popt = guess_skewvoight
+                        pcov = pcov
+                        fitting_flag.append('skewed_voight')
         fitparams.append(popt)
         fiterrors.append(pcov)
 
@@ -1360,10 +1469,12 @@ def detpixel_trace_compactsource(sci_img,band,d2cMaps,offset_slice=0,verbose=Fal
     return ypos,xpos
 
 def slice_alphapositions(band,d2cMaps,sliceID=None):
-    import mrs_aux as maux
     # find how many alpha positions fill an entire slice
     det_dims = (1024,1032)
-    mrs_fwhm  = maux.MRS_FWHM[band[0]]
+    MRS_alphapix = {'1':0.196,'2':0.196,'3':0.245,'4':0.273} # arcseconds
+    MRS_FWHM = {'1':2.16*MRS_alphapix['1'],'2':3.30*MRS_alphapix['2'],
+                '3':4.04*MRS_alphapix['3'],'4':5.56*MRS_alphapix['4']} # MRS PSF
+    mrs_fwhm  = MRS_FWHM[band[0]]
 
     ypos = np.arange(det_dims[0])
     slice_img,alpha_img,alpha_img2 = np.full(det_dims,0.),np.full(det_dims,0.),np.full(det_dims,0.)
@@ -1423,21 +1534,152 @@ def slice_alphapositions(band,d2cMaps,sliceID=None):
 
     return new_alpha_positions
 
+# slice mapping
+def slice_mapping(band,signal,signal_error,sliceMap_0percent,margin=5,stop_criterion = 5.,transm_criterion=0.9,verbose=False):
+    import pandas as pd
+    # Recommended margin value for channel 1 and 2 is 5 pixels.
+    # Recommended margin value for channel 3 and 4 is 7 pixels.
+
+    # ids of the individual slices
+    sliceid1=[111,121,110,120,109,119,108,118,107,117,106,116,105,115,104,114,103,113,102,112,101]
+    sliceid2=[201,210,202,211,203,212,204,213,205,214,206,215,207,216,208,217,209]
+    sliceid3=[316,308,315,307,314,306,313,305,312,304,311,303,310,302,309,301]
+    sliceid4=[412,406,411,405,410,404,409,403,408,402,407,401]
+
+    if band[0]   == '1': sliceid = sliceid1
+    elif band[0] == '2': sliceid = sliceid2
+    elif band[0] == '3': sliceid = sliceid3
+    elif band[0] == '4': sliceid = sliceid4
+
+    # initialize placeholders
+    transm_img        = np.zeros((1024,1032))
+    new_sliceMap      = np.zeros((1024,1032))
+    new_sliceMap_poly = np.zeros((1024,1032))
+
+    # interpolate NaN values
+    # take care of any remaining NaN values present in the signal of channel 4
+    if band[0] =='4':axis = 1
+    else: axis = 0
+
+    signal = pd.DataFrame(signal)
+    interp_signal = signal.interpolate(method='nearest',axis=axis).as_matrix()
+
+    signal_error = pd.DataFrame(signal_error)
+    interp_signal_error = signal_error.interpolate(method='nearest',axis=axis).as_matrix()
+
+    # compute new slice map
+    for islice in sliceid:
+        if verbose is True:
+            print 'Slice {}'.format(islice)
+        for row in range(1,1023):
+            lower = np.where(sliceMap_0percent[row,:] == islice)[0][0]
+            upper = np.where(sliceMap_0percent[row,:] == islice)[0][-1]+2
+
+            xdata = np.arange(1032)[lower+margin:upper-margin]
+            ydata = interp_signal[row,lower+margin:upper-margin]
+            sigma = interp_signal_error[row,lower+margin:upper-margin]
+
+            n_poly   = 1
+            residual_change = 100.
+            residual_changes = [residual_change]
+            counter = 0
+            flag    = 0
+            while residual_change > stop_criterion:
+                counter += 1
+                popt_1     = np.polyfit(xdata,ydata,n_poly,w=1/sigma)
+                poly_1     = np.poly1d(popt_1)
+                residual_1 = (ydata-poly_1(xdata))**2
+
+                popt_2     = np.polyfit(xdata,ydata,n_poly+1,w=1/sigma)
+                poly_2     = np.poly1d(popt_2)
+                residual_2 = (ydata-poly_2(xdata))**2
+
+                residual_change = np.abs((residual_2.sum()-residual_1.sum())/residual_1.sum())*100.
+                residual_changes.append(residual_change)
+
+                n_poly+= 1
+
+                if residual_changes[counter]>residual_changes[counter-1]:
+                    flag = 1
+                    break
+
+                if n_poly == 5:
+                    break
+
+            if n_poly == 2:
+                # first iteration gives good enough fit
+                n_polynomial   = 1
+                popt     = popt_1
+                poly     = poly_1
+                residual = residual_1
+            else:
+                # n+1 iteration gives best fit
+                n_polynomial   = n_poly-1
+                popt     = popt_2
+                poly     = poly_2
+                residual = residual_2
+            if flag == 1:
+                n_polynomial   = n_poly-1
+                popt     = popt_1
+                poly     = poly_1
+                residual = residual_1
+
+            transmission = interp_signal[row,lower:upper]/poly(np.arange(1032)[lower:upper] )
+            transm_img[row,lower:upper] = transmission
+
+            min_idx = np.where(transmission>transm_criterion)[0][0]
+            max_idx = np.where(transmission>transm_criterion)[0][-1]
+
+            new_sliceMap[row,lower+min_idx+1:lower+max_idx] = islice
+    new_sliceMap[0,:] = new_sliceMap[1,:]
+    new_sliceMap[1023,:] = new_sliceMap[1022,:]
+
+    # fit polynomial solution to slice edges
+    edge_pixels_left,edge_pixels_right = {},{}
+    for islice in sliceid:
+        edge_pixels_left[str(islice)],edge_pixels_right[str(islice)] = np.zeros(1024),np.zeros(1024)
+        for row in range(1024):
+            edge_pixels_left[str(islice)][row]  = np.where(new_sliceMap[row,:] == islice)[0][0]
+            edge_pixels_right[str(islice)][row] = np.where(new_sliceMap[row,:] == islice)[0][-1]
+
+        # shifts of more than two pixels are rejected
+        for row in range(1,1024):
+            if (np.abs(edge_pixels_left[str(islice)][row]-edge_pixels_left[str(islice)][row-1]) ==2):
+                edge_pixels_left[str(islice)][row-1] = np.nan
+
+            if (np.abs(edge_pixels_right[str(islice)][row]-edge_pixels_right[str(islice)][row-1]) ==2):
+                edge_pixels_right[str(islice)][row-1] = np.nan
+
+        sel_left  = ~np.isnan(edge_pixels_left[str(islice)])
+        popt_left = np.polyfit(np.arange(1024)[sel_left],edge_pixels_left[str(islice)][sel_left],4)
+        poly_left = np.poly1d(popt_left)
+
+        sel_right  = ~np.isnan(edge_pixels_right[str(islice)])
+        popt_right = np.polyfit(np.arange(1024)[sel_right],edge_pixels_right[str(islice)][sel_right],4)
+        poly_right = np.poly1d(popt_right)
+
+        for row in range(1024):
+            assert np.around(poly_left(np.arange(1024))[row])<=np.around(poly_right(np.arange(1024))[row])+2, 'Something went wrong in the polynomial fitting'
+            new_sliceMap_poly[row,np.around(poly_left(np.arange(1024))[row]):np.around(poly_right(np.arange(1024))[row])+2] = islice
+
+    return transm_img,new_sliceMap,new_sliceMap_poly
 
 # plot
-def plot_point_source_centroiding(band=None,sci_img=None,d2cMaps=None,spec_grid=None,centroid=None,ibin=None,data=None):
-    import mrs_aux as maux
+def plot_point_source_centroiding(band,sci_img,d2cMaps,spec_grid=None,centroid=None,ibin=None,data=None):
     # distortion maps
     sliceMap  = d2cMaps['sliceMap']
     lambdaMap = d2cMaps['lambdaMap']
     alphaMap  = d2cMaps['alphaMap']
     betaMap   = d2cMaps['betaMap']
-    nslices   = maux.MRS_nslices[band[0]]
-    mrs_fwhm  = maux.MRS_FWHM[band[0]]
+    nslices   = d2cMaps['nslices']
+    MRS_alphapix = {'1':0.196,'2':0.196,'3':0.245,'4':0.273} # arcseconds
+    MRS_FWHM = {'1':2.16*MRS_alphapix['1'],'2':3.30*MRS_alphapix['2'],
+                '3':4.04*MRS_alphapix['3'],'4':5.56*MRS_alphapix['4']} # MRS PSF
+    mrs_fwhm  = MRS_FWHM[band[0]]
     unique_betas = np.sort(np.unique(betaMap[(sliceMap>100*int(band[0])) & (sliceMap<100*(int(band[0])+1))]))
     fov_lims  = [alphaMap[np.nonzero(lambdaMap)].min(),alphaMap[np.nonzero(lambdaMap)].max()]
     lambcens,lambfwhms = spec_grid[0],spec_grid[1]
-    sign_amp,alpha_centers,beta_centers,sigma_alpha,sigma_beta = centroid[0],centroid[1],centroid[2],centroid[3],centroid[4]
+    sign_amp,alpha_centers,beta_centers,sigma_alpha,sigma_beta,sign_bkg = centroid
 
     # across-slice center:
     sum_signals = np.zeros(nslices)
@@ -1847,3 +2089,232 @@ def save_obj(obj,name,path='' ):
 def load_obj(name,path='' ):
     with open(path+name + '.pkl', 'rb') as f:
         return pickle.load(f)
+
+# interpolate nans in 1d array
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+
+    return np.isnan(y), lambda z: z.nonzero()[0]
+
+def interp_nans(y):
+    # replaces nans in 1d array by surrounding interpolated values
+    nans, x = nan_helper(y)
+    y[nans] = np.interp(x(nans), x(~nans), y[~nans])
+    return y
+
+# Alvaro's functions
+def find_max(signal_cut,wavel_cut,maxcut,w_toler):
+    #from scipy.signal import argrelmax
+    #from pylab import *
+    # Removes the first and last slope so they are not identified as maxima
+    iii = 0
+    while(signal_cut[iii] < 0) or (signal_cut[iii] > signal_cut[iii+1]) or (np.isnan(signal_cut[iii])):
+        signal_cut[iii] = np.nan
+        #print iii
+        iii = iii+1
+    jjj = -1
+    while(signal_cut[jjj] < 0) or (signal_cut[jjj] > signal_cut[jjj-1]) or (np.isnan(signal_cut[jjj])):
+        signal_cut[jjj] = np.nan
+        #print jjj
+        jjj = jjj-1
+
+    # Assigns Nan to the Infs in the signal
+    isinf = np.isinf(signal_cut)
+    wcinf = where(isinf)
+    for wwwinf in wcinf:
+        signal_cut[wwwinf] = np.nan
+    # Removes the Nan in the signal
+    isnan = np.isnan(signal_cut)
+    wc = where(isnan)
+    for www in wc:
+        signal_cut[www] = 0
+
+    # Creates a temporary spectrum with everything below maxcut max is 0, so it only finds the line peaks (and no noise) as maxima.
+    print "peak value = ", max(signal_cut)
+    ws = where(signal_cut > maxcut * max(signal_cut))
+    signal_temp = np.zeros(size(signal_cut))
+    signal_temp[ws] = signal_cut[ws]+0
+
+    # Searches for the maxima (i.e. the line peaks):
+    inds_maxs_temp = [argrelmax(signal_temp)[0]]
+    maxs_w_temp = wavel_cut[inds_maxs_temp]
+    maxs_s_temp = signal_cut[inds_maxs_temp]
+
+    # Some lines are double-peaked, so I need to remove maxima for the same line:
+    for mmm in range(1,size(maxs_w_temp)):
+        if abs(maxs_w_temp[mmm]-maxs_w_temp[mmm-1]) < w_toler:
+            if maxs_s_temp[mmm] > maxs_s_temp[mmm-1]:
+                maxs_w_temp[mmm-1] = np.nan
+            else:
+                maxs_w_temp[mmm] = np.nan
+
+    # Some lines are triple-peaked, so I need to repeat the process:
+    son_nan_temp2 = np.isnan(maxs_w_temp)
+    inds_maxs_temp2 = where(son_nan_temp2 == False)
+    maxs_s_temp2 = maxs_s_temp[inds_maxs_temp2]
+    maxs_w_temp2 = maxs_w_temp[inds_maxs_temp2]
+
+    for mmm in range(1,size(maxs_w_temp2)):
+        if abs(maxs_w_temp2[mmm]-maxs_w_temp2[mmm-1]) < w_toler:
+            if maxs_s_temp2[mmm] > maxs_s_temp2[mmm-1]:
+                maxs_w_temp2[mmm-1] = np.nan
+            else:
+                maxs_w_temp2[mmm] = np.nan
+
+    # Some lines are four-times-peaked, so I need to repeat the process:
+    son_nan_temp3 = np.isnan(maxs_w_temp2)
+    inds_maxs_temp3 = where(son_nan_temp3 == False)
+    maxs_s_temp3 = maxs_s_temp2[inds_maxs_temp3]
+    maxs_w_temp3 = maxs_w_temp2[inds_maxs_temp3]
+
+    for mmm in range(1,size(maxs_w_temp3)):
+        if abs(maxs_w_temp3[mmm]-maxs_w_temp3[mmm-1]) < w_toler:
+            if maxs_s_temp3[mmm] > maxs_s_temp3[mmm-1]:
+                maxs_w_temp3[mmm-1] = np.nan
+            else:
+                maxs_w_temp3[mmm] = np.nan
+
+    #And again:
+    son_nan_temp4 = np.isnan(maxs_w_temp3)
+    inds_maxs_temp4 = where(son_nan_temp4 == False)
+    maxs_s_temp4 = maxs_s_temp3[inds_maxs_temp4]
+    maxs_w_temp4 = maxs_w_temp3[inds_maxs_temp4]
+
+    for mmm in range(1,size(maxs_w_temp4)):
+        if abs(maxs_w_temp4[mmm]-maxs_w_temp4[mmm-1]) < w_toler:
+            if maxs_s_temp4[mmm] > maxs_s_temp4[mmm-1]:
+                maxs_w_temp4[mmm-1] = np.nan
+            else:
+                maxs_w_temp4[mmm] = np.nan
+
+    #One more:
+    son_nan_temp5 = np.isnan(maxs_w_temp4)
+    inds_maxs_temp5 = where(son_nan_temp5 == False)
+    maxs_s_temp5 = maxs_s_temp4[inds_maxs_temp5]
+    maxs_w_temp5 = maxs_w_temp4[inds_maxs_temp5]
+
+    for mmm in range(1,size(maxs_w_temp5)):
+        if abs(maxs_w_temp5[mmm]-maxs_w_temp5[mmm-1]) < w_toler:
+            if maxs_s_temp5[mmm] > maxs_s_temp5[mmm-1]:
+                maxs_w_temp5[mmm-1] = np.nan
+            else:
+                maxs_w_temp5[mmm] = np.nan
+
+    # So the "cleaned" maxima are:
+    son_nan = np.isnan(maxs_w_temp5)
+    inds_maxs = where(son_nan == False)
+    maxs_s = maxs_s_temp5[inds_maxs]
+    maxs_w = maxs_w_temp5[inds_maxs]
+
+    #One more, increasing the toler value at the middle of the spectrum:
+    son_nan_temp6 = np.isnan(maxs_w_temp5)
+    inds_maxs_temp6 = where(son_nan_temp6 == False)
+    maxs_s_temp6 = maxs_s_temp5[inds_maxs_temp6]
+    maxs_w_temp6 = maxs_w_temp5[inds_maxs_temp6]
+
+    for mmm in range(1, size(maxs_w_temp6)-1):
+        if abs(maxs_w_temp6[mmm]-maxs_w_temp6[mmm+1]) < w_toler+1 and maxs_w_temp6[mmm] > 650:
+            if maxs_s_temp6[mmm] > maxs_s_temp6[mmm+1]:
+                maxs_w_temp6[mmm+1] = np.nan
+            else:
+                maxs_w_temp6[mmm] = np.nan
+        elif abs(maxs_w_temp6[mmm]-maxs_w_temp6[mmm+1]) < w_toler+4 and maxs_w_temp6[mmm] > 950:
+            if maxs_s_temp6[mmm] > maxs_s_temp6[mmm+1]:
+                maxs_w_temp6[mmm+1] = np.nan
+            else:
+                maxs_w_temp6[mmm] = np.nan
+
+    # So the "cleaned" maxima are:
+    son_nan = np.isnan(maxs_w_temp6)
+    inds_maxs = where(son_nan == False)
+    maxs_s = maxs_s_temp6[inds_maxs]
+    maxs_w = maxs_w_temp6[inds_maxs]
+
+    return maxs_s,maxs_w
+
+def find_nearest_value(array,value):
+    idx = (np.abs(array-value)).argmin()
+    return array[idx]
+
+def find_peaks2(ydata, thres=0.3, min_dist=1):
+    """Peak detection routine.
+
+    Finds the numeric index of the peaks in *y* by taking its first order difference. By using
+    *thres* and *min_dist* parameters, it is possible to reduce the number of
+    detected peaks. *y* must be signed.
+
+    Parameters
+    ----------
+    y : ndarray (signed)
+        1D amplitude ydata to search for peaks.
+    thres : float between [0., 1.]
+        Normalized threshold. Only the peaks with amplitude higher than the
+        threshold will be detected.
+    min_dist : int
+        Minimum distance between each detected peak. The peak with the highest
+        amplitude is preferred to satisfy this constraint.
+
+    Returns
+    -------
+    ndarray
+        Array containing the numeric indexes of the peaks that were detected
+    """
+    if isinstance(ydata, np.ndarray) and np.issubdtype(ydata.dtype, np.unsignedinteger):
+        raise ValueError("ydata must be signed")
+
+    y = ydata.copy()
+    y[np.isnan(y)] = 0
+
+    thres = thres * (np.max(y) - np.min(y)) + np.min(y)
+    min_dist = int(min_dist)
+
+    # compute first order difference
+    dy = np.diff(y)
+
+    # propagate left and right values successively to fill all plateau pixels (0-value)
+    zeros,=np.where(dy == 0)
+
+    while len(zeros):
+        # add pixels 2 by 2 to propagate left and right value onto the zero-value pixel
+        zerosr = np.hstack([dy[1:], 0.])
+        zerosl = np.hstack([0., dy[:-1]])
+
+        # replace 0 with right value if non zero
+        dy[zeros]=zerosr[zeros]
+        zeros,=np.where(dy == 0)
+
+        # replace 0 with left value if non zero
+        dy[zeros]=zerosl[zeros]
+        zeros,=np.where(dy == 0)
+
+    # find the peaks by using the first order difference
+    peaks = np.where((np.hstack([dy, 0.]) < 0.)
+                     & (np.hstack([0., dy]) > 0.)
+                     & (y > thres))[0]
+
+    if peaks.size > 1 and min_dist > 1:
+        highest = peaks[np.argsort(y[peaks])][::-1]
+        rem = np.ones(y.size, dtype=bool)
+        rem[peaks] = False
+
+        for peak in highest:
+            if not rem[peak]:
+                sl = slice(max(0, peak - min_dist), peak + min_dist + 1)
+                rem[sl] = True
+                rem[peak] = False
+
+        peaks = np.arange(y.size)[~rem]
+
+    return peaks
