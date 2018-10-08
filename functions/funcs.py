@@ -1169,17 +1169,22 @@ def fit_etalon_lines(x,y,peaks,fit_func='skewed_voight',sigma0=3.5,f0=0.5,a0=0.1
                     popt,pcov = curve_fit(skewed_voight,xdata[peak_idx-N:peak_idx+N],ydata[peak_idx-N:peak_idx+N],p0=guess_skewvoight,absolute_sigma=True,bounds=bounds_skewvoight)
                     fitting_flag.append('skewed_voight')
                 except RuntimeError:
-                    popt,pcov = curve_fit(voight_profile,xdata[peak_idx-N:peak_idx+N],ydata[peak_idx-N:peak_idx+N],p0=guess_voight,absolute_sigma=True,bounds=bounds_voight)
-                    fitting_flag.append('voight_profile')
+                    try:
+                        popt,pcov = curve_fit(voight_profile,xdata[peak_idx-N:peak_idx+N],ydata[peak_idx-N:peak_idx+N],p0=guess_voight,absolute_sigma=True,bounds=bounds_voight)
+                        fitting_flag.append('voight_profile')
+                    except RuntimeError:
+                        popt = guess_gauss
+                        pcov = pcov
+                        fitting_flag.append('gauss1d')
                 except ValueError:
                     try:
                         sel = np.nonzero(ydata[peak_idx-N:peak_idx+N])
                         popt,pcov = curve_fit(skewed_voight,xdata[peak_idx-N:peak_idx+N][sel],ydata[peak_idx-N:peak_idx+N][sel],p0=guess_skewvoight,absolute_sigma=True,bounds=bounds_skewvoight)
                         fitting_flag.append('skewed_voight')
                     except RuntimeError:
-                        popt = guess_skewvoight
+                        popt = guess_gauss
                         pcov = pcov
-                        fitting_flag.append('skewed_voight')
+                        fitting_flag.append('gauss1d')
         fitparams.append(popt)
         fiterrors.append(pcov)
 
