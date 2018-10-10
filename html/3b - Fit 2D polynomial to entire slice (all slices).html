@@ -11811,7 +11811,7 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># directories</span>
@@ -11830,15 +11830,18 @@ div#notebook {
 <span class="n">FTSlinefits</span>   <span class="o">=</span> <span class="n">MRSWaveCalDir</span><span class="o">+</span><span class="s2">&quot;FTS_ET_linefits/&quot;</span>
 
 <span class="c1"># analysis inputs</span>
-<span class="n">band</span> <span class="o">=</span> <span class="s2">&quot;1C&quot;</span>
-<span class="n">etal</span> <span class="o">=</span> <span class="s2">&quot;ET1A&quot;</span> <span class="c1"># &quot;ET1A&quot;, &quot;ET1B&quot;</span>
+<span class="n">band</span> <span class="o">=</span> <span class="s1">&#39;2C&#39;</span>
+<span class="k">if</span> <span class="n">band</span> <span class="o">==</span> <span class="s1">&#39;1B&#39;</span><span class="p">:</span><span class="n">usedfilter</span> <span class="o">=</span> <span class="s1">&#39;SWP&#39;</span>
+<span class="k">elif</span> <span class="n">band</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;1C&#39;</span><span class="p">,</span><span class="s1">&#39;2C&#39;</span><span class="p">]:</span> <span class="n">usedfilter</span> <span class="o">=</span> <span class="s1">&#39;LWP&#39;</span>
+<span class="k">elif</span> <span class="n">band</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;2A&#39;</span><span class="p">,</span><span class="s1">&#39;2B&#39;</span><span class="p">]:</span> <span class="n">usedfilter</span> <span class="o">=</span> <span class="s1">&#39;Dichroic&#39;</span>
+<span class="n">etal</span> <span class="o">=</span> <span class="s2">&quot;ET1A&quot;</span> <span class="c1"># &quot;ET1A&quot;, &quot;ET1B&quot;, &quot;ET2A&quot;, &quot;ET2B&quot;</span>
 <span class="n">ref_alpha</span> <span class="o">=</span> <span class="mf">0.0</span>
 <span class="n">ref_sli</span> <span class="o">=</span> <span class="mi">10</span>
 
 <span class="c1"># input files</span>
-<span class="n">refpoint_file</span>   <span class="o">=</span> <span class="s1">&#39;data/Band&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">band</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_LWP_refslice&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_sli</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_alpha&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_alpha</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_refpoint_&#39;</span><span class="o">+</span><span class="n">user</span><span class="o">+</span><span class="s1">&#39;.txt&#39;</span>
+<span class="n">refpoint_file</span>   <span class="o">=</span> <span class="s1">&#39;data/Band&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">band</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_{}_refslice&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">usedfilter</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_sli</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_alpha&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_alpha</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_refpoint_&#39;</span><span class="o">+</span><span class="n">user</span><span class="o">+</span><span class="s1">&#39;.txt&#39;</span>
 <span class="n">fm_sol_file</span>     <span class="o">=</span> <span class="s1">&#39;data/Band&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">band</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_ET&#39;</span><span class="o">+</span> <span class="n">etal</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span> <span class="o">+</span><span class="s1">&#39;_slice&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_sli</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;.txt&#39;</span>
-<span class="n">pixoffsets_file</span> <span class="o">=</span> <span class="s1">&#39;data/Band&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">band</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_LWP_refslice&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_sli</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_alpha&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_alpha</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_reloffsets.txt&#39;</span>
+<span class="n">pixoffsets_file</span> <span class="o">=</span> <span class="s1">&#39;data/Band&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">band</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_{}_refslice&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">usedfilter</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_sli</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_alpha&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ref_alpha</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_reloffsets.txt&#39;</span>
 </pre></div>
 
 </div>
@@ -11848,7 +11851,7 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># load distortion maps</span>
@@ -11867,7 +11870,7 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Set of reference points</span>
@@ -11899,8 +11902,8 @@ div#notebook {
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Reference Slice =  10
 Reference Alpha =  0.0
-Reference Wav   =  6.761
-Reference Ypix  = 292.292
+Reference Wav   =  11.541
+Reference Ypix  = 895.47
 </pre>
 </div>
 </div>
@@ -11911,7 +11914,7 @@ Reference Ypix  = 292.292
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[5]:</div>
+<div class="prompt input_prompt">In&nbsp;[6]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># Set of fitted etalon line parameters</span>
@@ -11921,14 +11924,22 @@ Reference Ypix  = 292.292
 <span class="c1"># FTS Etalon data (need to extrapolate to operating temperatures (~35 K)?)</span>
 <span class="n">FTS_ET1A_linefits_file</span> <span class="o">=</span> <span class="n">FTSlinefits</span><span class="o">+</span><span class="s1">&#39;RAL_FTS_ET1A_FITPARAMS_07.01.00.fits&#39;</span>
 <span class="n">FTS_ET1B_linefits_file</span> <span class="o">=</span> <span class="n">FTSlinefits</span><span class="o">+</span><span class="s1">&#39;RAL_FTS_ET1B_FITPARAMS_07.01.00.fits&#39;</span>
+<span class="n">FTS_ET2A_linefits_file</span> <span class="o">=</span> <span class="n">FTSlinefits</span><span class="o">+</span><span class="s1">&#39;RAL_FTS_ET2A_FITPARAMS_07.01.00.fits&#39;</span>
+<span class="n">FTS_ET2B_linefits_file</span> <span class="o">=</span> <span class="n">FTSlinefits</span><span class="o">+</span><span class="s1">&#39;RAL_FTS_ET2B_FITPARAMS_07.01.00.fits&#39;</span>
 
 <span class="n">ET1A_linecenters</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">FTS_ET1A_linefits_file</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;LAMCEN&#39;</span><span class="p">]</span> <span class="c1"># [micron]</span>
 <span class="n">ET1B_linecenters</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">FTS_ET1B_linefits_file</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;LAMCEN&#39;</span><span class="p">]</span> <span class="c1"># [micron]</span>
+<span class="n">ET2A_linecenters</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">FTS_ET2A_linefits_file</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;LAMCEN&#39;</span><span class="p">]</span> <span class="c1"># [micron]</span>
+<span class="n">ET2B_linecenters</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">FTS_ET2B_linefits_file</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;LAMCEN&#39;</span><span class="p">]</span> <span class="c1"># [micron]</span>
 
 <span class="k">if</span> <span class="n">etal</span> <span class="o">==</span> <span class="s2">&quot;ET1A&quot;</span><span class="p">:</span>
     <span class="n">refsli_cen_wav</span> <span class="o">=</span> <span class="n">ET1A_linecenters</span>
 <span class="k">elif</span> <span class="n">etal</span> <span class="o">==</span> <span class="s2">&quot;ET1B&quot;</span><span class="p">:</span>
     <span class="n">refsli_cen_wav</span> <span class="o">=</span> <span class="n">ET1B_linecenters</span>
+<span class="k">if</span> <span class="n">etal</span> <span class="o">==</span> <span class="s2">&quot;ET2A&quot;</span><span class="p">:</span>
+    <span class="n">refsli_cen_wav</span> <span class="o">=</span> <span class="n">ET2A_linecenters</span>
+<span class="k">elif</span> <span class="n">etal</span> <span class="o">==</span> <span class="s2">&quot;ET2B&quot;</span><span class="p">:</span>
+    <span class="n">refsli_cen_wav</span> <span class="o">=</span> <span class="n">ET2B_linecenters</span>
 </pre></div>
 
 </div>
@@ -11938,7 +11949,7 @@ Reference Ypix  = 292.292
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># pixel offsets per slice</span>
@@ -11952,7 +11963,7 @@ Reference Ypix  = 292.292
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="k">for</span> <span class="n">islice</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">nslices</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
@@ -12074,10 +12085,6 @@ Slice 14
 Slice 15
 Slice 16
 Slice 17
-Slice 18
-Slice 19
-Slice 20
-Slice 21
 </pre>
 </div>
 </div>
