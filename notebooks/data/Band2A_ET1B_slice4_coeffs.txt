@@ -1,0 +1,6 @@
+# Band 2A   Etalon 1B   Slice 4
+# Distortion map version 06.04.00 - date 2018-10-09
+# Trace (isoalpha): Take pixel trace along specified slice, specified alpha position trace is built by taking the pixel in every detector row with alpha value closest to the one specified 
+# xpos[i] = np.argmin(alpha_img[i,:])+funcs.find_nearest(alpha_img[i,:][(slice_img[i,:]!=0)],alpha_pos)
+# Polynomial coefficients
+7.36722003283  7.70226418113e-05  2.78888202091e-06  0.0  0.0  0.00140959016435  -2.42717592591e-07  -1.13516520371e-09  0.0  0.0  -1.37859161461e-07  2.41637841621e-10  -7.49877875521e-13  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  

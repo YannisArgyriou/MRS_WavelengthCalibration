@@ -1,0 +1,24 @@
+# Band 2A   Filter SWP   RefSlice 10
+# Distortion map version 06.04.00 - date 2018-10-10
+# Trace (isoalpha): Take pixel trace along specified slice, specified alpha position trace is built by taking the pixel in every detector row with alpha value closest to the one specified 
+# xpos[i] = np.argmin(alpha_img[i,:])+funcs.find_nearest(alpha_img[i,:][(slice_img[i,:]!=0)],alpha_pos)
+# Band2A_Dichroic_refslice10_alpha0.0
+
+# Slice Nr.  Pixel offset (pix)
+1  11.8
+2  20.4
+3  23.4
+4  30.0
+5  32.0
+6  29.8
+7  24.4
+8  22.8
+9  16.4
+10  0.0
+11  5.6
+12  12.4
+13  10.2
+14  7.2
+15  3.8
+16  1.0
+17  9.2
