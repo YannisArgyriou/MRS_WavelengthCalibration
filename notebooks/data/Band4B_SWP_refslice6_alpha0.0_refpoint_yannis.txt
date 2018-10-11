@@ -1,0 +1,8 @@
+# Band 4B   Filter SWP   RefSlice 6
+# Distortion map version 06.04.00 - date 2018-10-11
+# Trace (isoalpha): Take pixel trace along specified slice, specified alpha position trace is built by taking the pixel in every detector row with alpha value closest to the one specified 
+# xpos[i] = np.argmin(alpha_img[i,:])+funcs.find_nearest(alpha_img[i,:][(slice_img[i,:]!=0)],alpha_pos)
+# Band4B_SWP_refslice6_alpha0.0
+
+# Reference Wavelength  Reference pixel (pix)
+21.436227224  819.0

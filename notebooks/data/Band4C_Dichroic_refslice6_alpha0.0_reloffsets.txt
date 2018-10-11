@@ -1,0 +1,19 @@
+# Band 4C   Filter Dichroic   RefSlice 6
+# Distortion map version 06.04.00 - date 2018-10-11
+# Trace (isoalpha): Take pixel trace along specified slice, specified alpha position trace is built by taking the pixel in every detector row with alpha value closest to the one specified 
+# xpos[i] = np.argmin(alpha_img[i,:])+funcs.find_nearest(alpha_img[i,:][(slice_img[i,:]!=0)],alpha_pos)
+# Band4C_Dichroic_refslice6_alpha0.0
+
+# Slice Nr.  Pixel offset (pix)
+1  -2.6
+2  4.4
+3  -12.4
+4  -2.4
+5  -7.8
+6  -7.8
+7  -10.2
+8  -23.8
+9  -38.4
+10  0.0
+11  -18.6
+12  -18.0

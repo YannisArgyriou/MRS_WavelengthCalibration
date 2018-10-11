@@ -1145,7 +1145,31 @@ def etalon_line_params(band):
         min_dist_e1b=9
         sigma0_e1b=1.9
 
-    return alpha_high,alpha_low,thres_e1a,min_dist_e1a,sigma0_e1a,thres_e1b,min_dist_e1b,sigma0_e1b
+    elif band == "4A":
+        alpha_high = 3.8
+        alpha_low = -2.8
+        thres_e2b=0.2
+        min_dist_e2b=18
+        sigma0_e2b=3.5
+
+    elif band == "4B":
+        alpha_high = 3.8
+        alpha_low = -2.8
+        thres_e2b=0.3
+        min_dist_e2b=25
+        sigma0_e2b=3.5
+
+    elif band == "4C":
+        alpha_high = 3.8
+        alpha_low = -2.8
+        thres_e2b=0.2
+        min_dist_e2b=32
+        sigma0_e2b=3.5
+
+    if band[0] in ['1','2']:
+        return alpha_high,alpha_low,thres_e1a,min_dist_e1a,sigma0_e1a,thres_e1b,min_dist_e1b,sigma0_e1b
+    elif band[0] in ['4']:
+        return alpha_high,alpha_low,thres_e2b,min_dist_e2b,sigma0_e2b
 
 def fit_etalon_lines(x,y,peaks,fit_func='skewed_voight',sigma0=3.5,f0=0.5,a0=0.1):
     # Available fitting functions: 'gauss1d','skewnorm_func','voight_profile','skewed_voight'
@@ -2419,7 +2443,7 @@ def find_peaks2(ydata, thres=0.3, min_dist=1):
     return peaks
 
 #--Wavelength calibration reference point per band
-def filter_transmission(band,datapath=None):
+def filter_transmission(band,datapath=None,verbose=False):
     # wavelength range of interest
     lamblower,lambupper = mrs_aux(band)[3]
     if band == '1B':
@@ -2464,7 +2488,8 @@ def filter_transmission(band,datapath=None):
 
         filter_wave = filterWave[sel]
         filter_transm = (D1B/D1A)[sel]
-        print 'Dichroic D1B/D1A transmission ratio'
+        if verbose:
+            print 'Dichroic D1B/D1A transmission ratio'
 
     elif band == '2B':
         usedfilter='Dichroic'
@@ -2480,7 +2505,8 @@ def filter_transmission(band,datapath=None):
 
         filter_wave = filterWave[sel]
         filter_transm = (D1C/D1B)[sel]
-        print 'Dichroic D1C/D1B transmission ratio'
+        if verbose:
+            print 'Dichroic D1C/D1B transmission ratio'
 
     elif band == '2C':
         usedfilter='LWP' # Long Wavepass Filter
@@ -2496,6 +2522,57 @@ def filter_transmission(band,datapath=None):
         filter_wave = LWPwave[sel]
         filter_transm = LWPtransm[sel]
 
+    elif band == '4A':
+        usedfilter='Dichroic'
+        # Read the measured transmission curves from the csv files
+        # zeroth colum is wavelength [micrometer]
+        # first column is room temperature transmission
+        # second column is 7K transmission
+        col = 2
+        filterWave= np.genfromtxt(datapath + "fm_dichroics_1a.csv", delimiter=";")[:,0]
+        D2A = np.genfromtxt(datapath + "fm_dichroics_2a.csv", delimiter=";")[:,col]/100.
+        D3A = np.genfromtxt(datapath + "fm_dichroics_3a.csv", delimiter=";")[:,col]/100.
+        D2B = np.genfromtxt(datapath + "fm_dichroics_2b.csv", delimiter=";")[:,col]/100.
+        D3B = np.genfromtxt(datapath + "fm_dichroics_3b.csv", delimiter=";")[:,col]/100.
+        sel = (filterWave>=lamblower) & (filterWave<=lambupper)
+
+        filter_wave = filterWave[sel]
+        filter_transm = ((D2B*D3B)/(D2A*D3A))[sel]
+
+        if verbose:
+            print 'Dichroic (D2B*D3B)/(D2A*D3A) transmission ratio'
+
+    elif band == '4B':
+        usedfilter='SWP' # Short Wavepass Filter
+        # Read the measured transmission curves from the dat files
+        # first colum is wavelength [micrometer]
+        # second and third columns are room temperature transmissions
+        # fourth column is 35K transmission
+        SWPwvnr,SWPtransm = np.genfromtxt(datapath + "swp_filter.txt", skip_header = 15, skip_footer=1, usecols=(0,3), delimiter = '',unpack='True')
+        SWPwave = 10000./SWPwvnr
+        SWPtransm = SWPtransm/100. # convert percentage to decimal
+        sel = (SWPwave>=lamblower) & (SWPwave<=lambupper)
+
+        filter_wave = SWPwave[sel]
+        filter_transm = SWPtransm[sel]
+
+    elif band == '4C':
+        usedfilter='Dichroic'
+        # Read the measured transmission curves from the csv files
+        # zeroth colum is wavelength [micrometer]
+        # first column is room temperature transmission
+        # second column is 7K transmission
+        col = 2
+        filterWave= np.genfromtxt(datapath + "fm_dichroics_1a.csv", delimiter=";")[:,0]
+        D2B = np.genfromtxt(datapath + "fm_dichroics_2b.csv", delimiter=";")[:,col]/100.
+        D3B = np.genfromtxt(datapath + "fm_dichroics_3b.csv", delimiter=";")[:,col]/100.
+        D2C = np.genfromtxt(datapath + "fm_dichroics_2c.csv", delimiter=";")[:,col]/100.
+        D3C = np.genfromtxt(datapath + "fm_dichroics_3c.csv", delimiter=";")[:,col]/100.
+        sel = (filterWave>=lamblower) & (filterWave<=lambupper)
+
+        filter_wave = filterWave[sel]
+        filter_transm = ((D2C*D3C)/(D2B*D3B))[sel]
+
     return usedfilter,filter_wave,filter_transm
 
 
@@ -2506,7 +2583,7 @@ def mrs_filter_transmission(band,datapath=None):
         usedfilter='SWP'
         # swp_filter_img: SWP filter extended obs (SWP transm x 800K BB), ext_source_img: 800K BB extended source config
 
-        swp_filter_img,ext_source_img,bkg_img = mrsobs.FM_MTS_800K_BB_MRS_OPT_08(datapath,wp_filter=usedfilter,output='img')
+        swp_filter_img,ext_source_img,bkg_img = mrsobs.FM_MTS_800K_BB_MRS_OPT_08(datapath,band,wp_filter=usedfilter,output='img')
         swp_transmission_img = (swp_filter_img-bkg_img)/(ext_source_img-bkg_img)
 
         return usedfilter,swp_filter_img,ext_source_img,swp_transmission_img
@@ -2515,7 +2592,7 @@ def mrs_filter_transmission(band,datapath=None):
         usedfilter='LWP'
         # lwp_filter_img: LWP filter extended obs (LWP transm x 800K BB), ext_source_img: 800K BB extended source config
 
-        lwp_filter_img,ext_source_img,bkg_img = mrsobs.FM_MTS_800K_BB_MRS_OPT_08(datapath,wp_filter=usedfilter,output='img')
+        lwp_filter_img,ext_source_img,bkg_img = mrsobs.FM_MTS_800K_BB_MRS_OPT_08(datapath,band,wp_filter=usedfilter,output='img')
         lwp_transmission_img = (lwp_filter_img-bkg_img)/(ext_source_img-bkg_img)
 
         return usedfilter,lwp_filter_img,ext_source_img,lwp_transmission_img
@@ -2542,10 +2619,42 @@ def mrs_filter_transmission(band,datapath=None):
         usedfilter='LWP'
         # lwp_filter_img: LWP filter extended obs (LWP transm x 800K BB), ext_source_img: 800K BB extended source config
 
-        lwp_filter_img,ext_source_img,bkg_img = mrsobs.FM_MTS_800K_BB_MRS_OPT_08(datapath,wp_filter='LWP',output='img')
+        lwp_filter_img,ext_source_img,bkg_img = mrsobs.FM_MTS_800K_BB_MRS_OPT_08(datapath,band,wp_filter='LWP',output='img')
         lwp_transmission_img = (lwp_filter_img-bkg_img)/(ext_source_img-bkg_img)
 
         return usedfilter,lwp_filter_img,ext_source_img,lwp_transmission_img
+
+    elif band == '4A':
+        usedfilter='Dichroic'
+        # top: xconfig 2BxC image, bottom: nominal 1B/2B detector image
+        cross_config = mrsobs.MIRI_internal_calibration_source(datapath,'4AxB',campaign='FM',output='img')
+        nomin_config = mrsobs.MIRI_internal_calibration_source(datapath,'4A',campaign='FM',output='img')
+        mrs_transmission_img = cross_config/nomin_config
+
+        return usedfilter,cross_config,nomin_config,mrs_transmission_img
+
+    elif band == '4B':
+        usedfilter='SWP'
+        # swp_filter_img: SWP filter extended obs (SWP transm x 800K BB), ext_source_img: 800K BB extended source config
+
+        swp_filter_img,ext_source_img,bkg_img = mrsobs.FM_MTS_800K_BB_MRS_OPT_08(datapath,band,wp_filter=usedfilter,output='img')
+        swp_transmission_img = (swp_filter_img-bkg_img)/(ext_source_img-bkg_img)
+
+        return usedfilter,swp_filter_img,ext_source_img,swp_transmission_img
+
+    elif band == '4C':
+        usedfilter='Dichroic'
+        # top: xconfig 2BxC image, bottom: nominal 1B/2B detector image
+        cross_config = mrsobs.MIRI_internal_calibration_source(datapath,'4CxB',campaign='FM',output='img')
+        nomin_config = mrsobs.MIRI_internal_calibration_source(datapath,'4C',campaign='FM',output='img')
+
+        # the division of the above two images yields a negative signal;
+        # to mitigate this we offset the signal of both images by a constant value
+        xcol = 82
+        offset = np.abs(cross_config[:,xcol][~np.isnan(cross_config[:,xcol])].min())
+        mrs_transmission_img = (nomin_config+offset)/(cross_config+offset)
+
+        return usedfilter,cross_config,nomin_config,mrs_transmission_img
 
 def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=False):
     from scipy.signal import savgol_filter
@@ -2554,8 +2663,9 @@ def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=Fal
     lamblower,lambupper = mrs_aux(band)[3]
     if band == '1B': usedfilter = 'SWP'
     elif band == '1C': usedfilter = 'LWP'
+    elif band == '4C': usedfilter = 'Dichroic'
 
-    if band in ['1B','1C']:
+    if band in ['1B','1C','4C']:
         """
         Below we compare the lab and MRS determined filter transmissions. Since the steep gradient part of the transmission
         in the lab data shows erratic changes of slope (compared to the MRS data), rather than defining a cut-off on the steep
@@ -2580,15 +2690,21 @@ def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=Fal
 
         if band == '1B': sci_fm_data_grad = np.gradient(savgol_filter(sci_fm_data[np.nonzero(sci_fm_data)],21,3))
         elif band == '1C': sci_fm_data_grad = np.gradient(sci_fm_data)
+        elif band == '4C': sci_fm_data_grad = np.gradient(savgol_filter(sci_fm_data[np.nonzero(sci_fm_data)],51,3))
         sci_fm_data_signs = np.sign(sci_fm_data_grad)
 
         # filter regions as necessary
         if band == '1B':
             filter_signs[:find_nearest(filter_wave,6.44)] = 0
             sci_fm_data_signs[:800] = 0
+        elif band == '4C':
+            sci_fm_data_signs[:400] = 0
 
         filter_zerocrossing = np.where(np.abs(np.diff(filter_signs)) == 2)[0]
         sci_fm_data_zerocrossing = np.where(np.abs(np.diff(sci_fm_data_signs)) == 2)[0]
+        if band == '4C':
+            sci_fm_data_zerocrossing = np.where(np.abs(np.diff(sci_fm_data_signs[575:600])) == 2)[0]
+            sci_fm_data_zerocrossing += 575
 
         x0 = filter_wave[filter_zerocrossing[0]]
         x1 = filter_wave[filter_zerocrossing[0]+1]
@@ -2624,14 +2740,19 @@ def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=Fal
             axs[0].hlines(0,lamblower,lambupper)
             axs[0].vlines(cutofflamb,-0.001,0.004,linestyle='dashed',label='reference point')
             axs[0].set_xlim(lamblower,lambupper)
-            axs[1].plot(np.gradient(savgol_filter(sci_fm_data[np.nonzero(sci_fm_data)],21,3)),'r')
+            if band == '1B':
+                axs[1].plot(np.gradient(savgol_filter(sci_fm_data[np.nonzero(sci_fm_data)],21,3)),'r')
+            elif band == '4C':
+                axs[1].plot(np.gradient(savgol_filter(sci_fm_data[np.nonzero(sci_fm_data)],51,3)),'r')
+            else:
+                axs[1].plot(np.gradient(sci_fm_data[np.nonzero(sci_fm_data)]),'r')
             axs[1].hlines(0,0,1024)
             axs[1].vlines(cutoffpix,-0.004,0.008,linestyle='dashed',label='reference point')
             axs[1].set_xlim(0,1023)
             axs[0].set_xlabel('Wavelength [micron]',fontsize=12)
-            axs[0].set_ylabel('INTA SWP transm gradient',fontsize=12)
+            axs[0].set_ylabel('INTA {} transm gradient'.format(usedfilter),fontsize=12)
             axs[1].set_xlabel('Y-coordinate [pix]',fontsize=12)
-            axs[1].set_ylabel('RAL SWP transm gradient',fontsize=12)
+            axs[1].set_ylabel('RAL {} transm gradient'.format(usedfilter),fontsize=12)
             for plot in range(2):
                 axs[plot].tick_params(axis='both',labelsize=12)
                 axs[plot].legend(loc='upper right',fontsize=12)
@@ -2758,6 +2879,114 @@ def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=Fal
             for plot in range(2):
                 axs[plot].tick_params(axis='both',labelsize=12)
                 axs[plot].legend(loc='upper right',fontsize=12)
+            plt.tight_layout()
+
+    elif band == '4A':
+        # load spectrum from desired location and carry-out analysis
+        sci_fm_data = mrs_transmission
+        sci_fm_data = interp_nans(sci_fm_data)
+
+        # signal post-processing
+        sci_fm_data = savgol_filter(sci_fm_data,201,2)
+
+        # compute gradients and slopes
+        filter_grad = np.gradient(filter_transm,filter_wave)
+
+        sci_fm_data_grad = np.gradient(sci_fm_data)
+        sci_fm_data_grad_filter = savgol_filter(sci_fm_data_grad,51,2)
+
+        cutofflamb = filter_wave[np.argmax(filter_grad)]
+        cutoffpix  = sci_fm_data_grad_filter.argmax() # wavelength maps of channels 3 and 4 are inverted!
+
+        if plot:
+            fig,axs = plt.subplots(1,2,figsize=(12,6))
+            axs[0].plot(filter_wave,filter_transm,label='lab data transmission')
+            axs[0].set_xlim(lamblower,lambupper)
+            axs[0].set_ylim(0,1.41)
+            axs[0].tick_params(axis='both',labelsize=20)
+            axs[0].legend(loc='upper right',framealpha=0.4,fontsize=14)
+            axs[0].set_xlabel('Wavelength [micron]',fontsize=20)
+            axs[0].set_ylabel('Transmission',fontsize=20)
+            axs[1].plot(mrs_transmission,label='FM transmission')
+            axs[1].plot(sci_fm_data,label='filtered signal')
+            axs[1].set_xlim(-40,1064)
+            axs[1].set_ylim(0,1.41)
+            axs[1].set_xlabel('Y-coordinate [pix]',fontsize=20)
+            axs[1].tick_params(axis='both',labelsize=20)
+            axs[1].legend(loc='upper right',framealpha=0.4,fontsize=14)
+            plt.tight_layout()
+
+            fig,axs = plt.subplots(2,1,figsize=(12,10))
+            axs[0].plot(filter_wave,filter_grad)
+            axs[0].hlines(0,lamblower,lambupper)
+            axs[0].vlines(cutofflamb,-0.001,0.004)
+            axs[0].set_xlim(lamblower,lambupper)
+            axs[0].set_ylim(-0.0002,0.001)
+            # axs[1].plot(sci_fm_data_grad)
+            axs[1].plot(sci_fm_data_grad_filter)
+            axs[1].hlines(0,0,1024)
+            axs[1].vlines(cutoffpix,-0.004,0.008)
+            axs[1].set_xlim(0,1023)
+            axs[1].set_ylim(-0.002,0.008)
+            axs[0].set_xlabel('Wavelength [micron]',fontsize=20)
+            axs[0].set_ylabel('lab transm gradient',fontsize=20)
+            axs[1].set_xlabel('Detector y-coord [pix]',fontsize=20)
+            axs[1].set_ylabel('Transm gradient',fontsize=20)
+            for plot in range(2):axs[plot].tick_params(axis='both',labelsize=20)
+            plt.tight_layout()
+
+    elif band == '4B':
+        # load spectrum from desired location and carry-out analysis
+        sci_fm_data = mrs_transmission
+        sci_fm_data = interp_nans(sci_fm_data)
+
+        # signal post-processing
+        sci_fm_data = savgol_filter(sci_fm_data,51,2)
+
+        # compute gradients and slopes
+        filter_grad = np.gradient(filter_transm,filter_wave)
+
+        sci_fm_data_grad = np.gradient(sci_fm_data)
+        sci_fm_data_grad_filter = savgol_filter(sci_fm_data_grad,51,2)
+
+        cutofflamb = filter_wave[np.argmin(filter_grad)]
+        cutoffpix  = sci_fm_data_grad_filter.argmin() # wavelength maps of channels 3 and 4 are inverted!
+
+        if plot:
+            fig,axs = plt.subplots(1,2,figsize=(12,6))
+            axs[0].plot(filter_wave,filter_transm,label='lab data transmission')
+            axs[0].set_xlim(lamblower,lambupper)
+            axs[0].set_ylim(min(filter_transm),max(filter_transm))
+            axs[0].tick_params(axis='both',labelsize=20)
+            axs[0].legend(loc='upper right',framealpha=0.4,fontsize=14)
+            axs[0].set_xlabel('Wavelength [micron]',fontsize=20)
+            axs[0].set_ylabel('Transmission',fontsize=20)
+            axs[1].plot(mrs_transmission,label='FM transmission')
+            axs[1].plot(sci_fm_data,label='filtered signal')
+            axs[1].set_xlim(-40,1064)
+            axs[1].set_ylim(min(sci_fm_data),max(sci_fm_data))
+            axs[1].set_xlabel('Y-coordinate [pix]',fontsize=20)
+            axs[1].tick_params(axis='both',labelsize=20)
+            axs[1].legend(loc='upper right',framealpha=0.4,fontsize=14)
+            plt.tight_layout()
+
+            fig,axs = plt.subplots(2,1,figsize=(12,10))
+            axs[0].plot(filter_wave,filter_grad)
+            axs[0].hlines(0,lamblower,lambupper)
+            axs[0].vlines(cutofflamb,min(filter_grad),max(filter_grad))
+            axs[0].set_xlim(lamblower,lambupper)
+            axs[0].set_ylim(min(filter_grad),max(filter_grad))
+            # axs[1].plot(sci_fm_data_grad)
+            axs[1].plot(sci_fm_data_grad_filter)
+            axs[1].hlines(0,0,1024)
+            axs[1].vlines(cutoffpix,min(sci_fm_data_grad_filter),max(sci_fm_data_grad_filter))
+            axs[1].set_xlim(0,1023)
+            axs[1].set_ylim(min(sci_fm_data_grad_filter),max(sci_fm_data_grad_filter))
+            axs[0].set_xlabel('Wavelength [micron]',fontsize=20)
+            axs[0].set_ylabel('lab transm gradient',fontsize=20)
+            axs[1].set_xlabel('Detector y-coord [pix]',fontsize=20)
+            axs[1].set_ylabel('Transm gradient',fontsize=20)
+            for plot in range(2):axs[plot].tick_params(axis='both',labelsize=20)
             plt.tight_layout()
 
 

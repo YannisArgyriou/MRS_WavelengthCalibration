@@ -749,15 +749,20 @@ def FM_MTS_800K_BB_MRS_OPT_06_raster(lvl2path,position=None,pointing='all',outpu
     elif (pointing != 'all') & (output=='filename'):
         return sci_imgs[pointing],bkg_file
 
-def FM_MTS_800K_BB_MRS_OPT_08(lvl2path,wp_filter=None,output='img'):
+def FM_MTS_800K_BB_MRS_OPT_08(lvl2path,band,wp_filter=None,output='img'):
     # MRS Wavelength Characterization
     # Wave-Pass (wp) filter can be Long-Wave-Pass (LWP) filter or Short-Wave-Pass (SWP) filter.
-    sci_imgs = {'LWP':lvl2path+'FM1T00010841/MIRFM1T00010841_1_495_SE_2011-05-17T22h54m09_LVL2.fits',
-                'LWP_HOLE':lvl2path+'FM1T00010842/MIRFM1T00010842_1_495_SE_2011-05-17T23h35m45_LVL2.fits',
-                'SWP':lvl2path+'FM1T00010950/MIRFM1T00010950_1_495_SE_2011-05-20T09h25m54_LVL2.fits',
-                'SWP_HOLE':lvl2path+'FM1T00010951/MIRFM1T00010951_1_495_SE_2011-05-20T10h16m00_LVL2.fits'}
-    bkg_imgs = {'LWP':lvl2path+'FM1T00012203/MIRFM1T00012203_1_495_SE_2011-06-27T22h03m11_LVL2.fits',
-                'SWP':lvl2path+'FM1T00010953/MIRFM1T00010953_1_495_SE_2011-05-20T11h50m14_LVL2.fits'}
+    if band[0] in ['1','2']:
+        sci_imgs = {'LWP':lvl2path+'FM1T00010841/MIRFM1T00010841_1_495_SE_2011-05-17T22h54m09_LVL2.fits',
+                    'LWP_HOLE':lvl2path+'FM1T00010842/MIRFM1T00010842_1_495_SE_2011-05-17T23h35m45_LVL2.fits',
+                    'SWP':lvl2path+'FM1T00010950/MIRFM1T00010950_1_495_SE_2011-05-20T09h25m54_LVL2.fits',
+                    'SWP_HOLE':lvl2path+'FM1T00010951/MIRFM1T00010951_1_495_SE_2011-05-20T10h16m00_LVL2.fits'}
+        bkg_imgs = {'LWP':lvl2path+'FM1T00012203/MIRFM1T00012203_1_495_SE_2011-06-27T22h03m11_LVL2.fits',
+                    'SWP':lvl2path+'FM1T00010953/MIRFM1T00010953_1_495_SE_2011-05-20T11h50m14_LVL2.fits'}
+    elif band[0] in ['3','4']:
+        sci_imgs = {'SWP':lvl2path+'FM1T00010950/MIRFM1T00010950_1_494_SE_2011-05-20T09h25m31_LVL2.fits',
+                    'SWP_HOLE':lvl2path+'FM1T00010951/MIRFM1T00010951_1_494_SE_2011-05-20T10h15m37_LVL2.fits'}
+        bkg_imgs = {'SWP':lvl2path+'FM1T00010953/MIRFM1T00010953_1_494_SE_2011-05-20T11h49m51_LVL2.fits'}
     if output == 'img':
         from astropy.io import fits
         hdulist_filter,hdulist_hole,hdulist_bkg = fits.open(sci_imgs[wp_filter]),fits.open(sci_imgs[wp_filter+'_HOLE']),fits.open(bkg_imgs[wp_filter])
