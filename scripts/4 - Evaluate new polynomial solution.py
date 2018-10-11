@@ -18,7 +18,7 @@ from mpl_toolkits.mplot3d import Axes3D
 get_ipython().magic(u'matplotlib notebook')
 
 
-# In[2]:
+# In[3]:
 
 # directories
 
@@ -34,8 +34,8 @@ datadir = "data/"
 cdpDir = workDir+"cdp_data/"
 
 # analysis inputs
-band = "2C"
-etal = "ET1B" # "ET1A", "ET1B", "ET2A", "ET2B"
+band = "4C"
+etal = "ET2B" # "ET1A", "ET1B", "ET2A", "ET2B"
 islice = 10
 
 # load new wavelength solution
@@ -43,7 +43,7 @@ wavsolution_file   = 'data/Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(islice
 slice_wavcoeffs = np.loadtxt(wavsolution_file,unpack=True, skiprows = 5)
 
 
-# In[3]:
+# In[4]:
 
 # load distortion maps
 d2cMaps   = d2cMapping(band,cdpDir)
@@ -61,7 +61,7 @@ alphas = alpha_img[512,:][x_coords]
 xs = interp1d(alphas,x_coords)(0.)
 
 
-# In[4]:
+# In[5]:
 
 fileversion = "06.04.00"
 distcdp = {}
@@ -82,13 +82,13 @@ distcdp["2B"] = distcdp["1B"]
 distcdp["2A"] = distcdp["1A"]
 
 
-# In[5]:
+# In[6]:
 
 band_distCDP = fits.open(cdpDir+distcdp[band])
 slice_wavcoeffs_cdp = np.array(band_distCDP['Lambda_CH{}'.format(band[0])].data[islice-1])
 
 
-# In[6]:
+# In[7]:
 
 print '------DISTORTION CDP version {}--------'.format(fileversion)
 print 'Reference x-position: {}pix'.format(round(slice_wavcoeffs_cdp[0],2))
@@ -99,7 +99,7 @@ print 'Reference x-position: {}pix'.format(round(xs,2))
 print '2D polynomial coefficients: {}'.format(slice_wavcoeffs)
 
 
-# In[7]:
+# In[8]:
 
 channel = int(band[0])
 new_lambdaMap  = np.zeros(sliceMap.shape)
@@ -128,7 +128,7 @@ for islice in range(1,nslices+1):
     new_lambdaMap[pixelCtry,pixelCtrx]   = lambdas
 
 
-# In[8]:
+# In[9]:
 
 plt.figure()
 plt.imshow(new_lambdaMap)

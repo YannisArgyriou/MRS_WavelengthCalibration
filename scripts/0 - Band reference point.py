@@ -47,9 +47,9 @@ FilterTransmDir   = MRSWaveCalDir+"MrsFilterTransmissions/"
 # In[3]:
 
 # inputs
-band = '2C'                     # spectral band under investigation
+band = '4C'                     # spectral band under investigation
 lamblower,lambupper = funcs.mrs_aux(band)[3] # nominal wavelength range of mrs band
-islice    = 10                  # slice number (equivalent to beta position)
+islice    = 6                  # slice number (equivalent to beta position)
 alpha_pos = 0.                  # along-slice position, [arcsec]
 
 
@@ -63,7 +63,7 @@ alpha_pos = 0.                  # along-slice position, [arcsec]
 
 # In[4]:
 
-usedfilter,filter_wave,filter_transm = funcs.filter_transmission(band,datapath=FilterTransmDir)
+usedfilter,filter_wave,filter_transm = funcs.filter_transmission(band,datapath=FilterTransmDir,verbose=True)
 
 # plot transmissions
 plt.figure(figsize=(12,6))
@@ -82,6 +82,10 @@ plt.tight_layout()
 # In[5]:
 
 usedfilter,source_img1,source_img2,mrs_transmission_img = funcs.mrs_filter_transmission(band,datapath=lvl2path)
+if band[0] in ['3','4']:
+    # The wavecal analysis of channels 3 and 4 will be inverted; 
+    # this is to by-pass the issue that the lambdaMap of channel 3 and 4 are in fact inverted (pix0->1024 yields decreasing wavelengths, as opposed to channels 1 and 2 that yield increasing wavelengths)
+    source_img1,source_img2,mrs_transmission_img = np.flipud(source_img1),np.flipud(source_img2),np.flipud(mrs_transmission_img)
 
 # plot
 fig,axs = plt.subplots(1,3,figsize=(12,4))
@@ -119,6 +123,11 @@ alphaMap  = d2cMaps['alphaMap']
 nslices   = d2cMaps['nslices']
 det_dims  = (1024,1032)
 
+if band[0] in ['3','4']:
+    sliceMap  = np.flipud(sliceMap)
+    lambdaMap = np.flipud(lambdaMap)
+    alphaMap  = np.flipud(alphaMap)
+
 
 # In[7]:
 
@@ -137,7 +146,7 @@ axs[0].set_title('Pixel trace through MRS slice',fontsize=12)
 axs[0].set_xlabel('Detector x-coordinate [pixel]',fontsize=12)
 axs[0].set_ylabel('Detector y-coordinate [pixel]',fontsize=12)
 axs[1].plot(mrs_transmission_img[ypos,xpos])
-axs[1].set_title('SWP filter transmission (MRS data)',fontsize=12)
+axs[1].set_title('{} filter transmission (MRS data)'.format(usedfilter),fontsize=12)
 axs[1].set_xlabel('Detector y-coordinate [pix]',fontsize=12)
 axs[1].set_ylabel('Transmission',fontsize=12)
 for plot in range(2): axs[plot].tick_params(axis='both',labelsize=12)
@@ -156,6 +165,11 @@ cutofflamb,cutoffpix = funcs.get_reference_point(band,filter_wave,filter_transm,
 
 print 'Reference wavelength: {} micron'.format(round(cutofflamb,3))
 print 'Reference pixel: {} pix'.format(round(cutoffpix,3))
+
+# wavelength maps of channels 3 and 4 are inverted!
+if band[0] in ['3','4']:
+    cutoffpix  = len(mrs_transmission)-cutoffpix
+    print 'Flipped reference pixel: {} pix'.format(round(cutoffpix,3))
 
 
 # ### > Alvaro's fit of the reference point

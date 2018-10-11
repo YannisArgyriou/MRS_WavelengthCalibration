@@ -36,13 +36,13 @@ MRSWaveCalDir = workDir+"MRSWaveCal/"
 FTSlinefits   = MRSWaveCalDir+"FTS_ET_linefits/"
 
 # analysis inputs
-band = '2C'
-if band == '1B':usedfilter = 'SWP'
+band = '4C'
+if band in ['1B','4B']:usedfilter = 'SWP'
 elif band in ['1C','2C']: usedfilter = 'LWP'
-elif band in ['2A','2B']: usedfilter = 'Dichroic'
-etal = "ET1A" # "ET1A", "ET1B", "ET2A", "ET2B"
+elif band in ['2A','2B','4A','4C']: usedfilter = 'Dichroic'
+etal = "ET2B" # "ET1A", "ET1B", "ET2A", "ET2B"
 ref_alpha = 0.0
-ref_sli = 10
+ref_sli = 6
 
 # input files
 refpoint_file   = 'data/Band'+str(band)+'_{}_refslice'.format(usedfilter)+str(ref_sli)+'_alpha'+str(ref_alpha)+'_refpoint_'+user+'.txt'
@@ -95,14 +95,10 @@ ET1B_linecenters = fits.open(FTS_ET1B_linefits_file)[1].data['LAMCEN'] # [micron
 ET2A_linecenters = fits.open(FTS_ET2A_linefits_file)[1].data['LAMCEN'] # [micron]
 ET2B_linecenters = fits.open(FTS_ET2B_linefits_file)[1].data['LAMCEN'] # [micron]
 
-if etal == "ET1A":
-    refsli_cen_wav = ET1A_linecenters
-elif etal == "ET1B":
-    refsli_cen_wav = ET1B_linecenters
-if etal == "ET2A":
-    refsli_cen_wav = ET2A_linecenters
-elif etal == "ET2B":
-    refsli_cen_wav = ET2B_linecenters
+if etal == "ET1A":refsli_cen_wav = ET1A_linecenters
+elif etal == "ET1B":refsli_cen_wav = ET1B_linecenters
+elif etal == "ET2A":refsli_cen_wav = ET2A_linecenters
+elif etal == "ET2B":refsli_cen_wav = ET2B_linecenters
 
 
 # In[7]:
@@ -116,7 +112,10 @@ offsets = np.loadtxt(pixoffsets_file,unpack=True,usecols=(0,1), skiprows = 5)[1]
 for islice in range(1,nslices+1):
     print 'Slice {}'.format(islice)
     alpha_tab = datadir + 'Band'+str(band)+'_'+etal+'_slice'+str(islice)+'.txt'
-    alpha_pos, xpos_FMetalon1A_peaks, FMetalon1A_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
+    if etal == "ET1A":alpha_pos, xpos_FMetalon1A_peaks, FMetalon1A_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
+    elif etal == "ET1B":alpha_pos, xpos_FMetalon1B_peaks, FMetalon1B_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
+    elif etal == "ET2A":alpha_pos, xpos_FMetalon2A_peaks, FMetalon2A_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
+    elif etal == "ET2B":alpha_pos, xpos_FMetalon2B_peaks, FMetalon2B_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
     
     # compute slice reference x-position
     alpha_img = np.zeros(det_dims)
@@ -146,11 +145,17 @@ for islice in range(1,nslices+1):
         w_val = refsli_cen_wav[w_val_ind]
 
     for ylow in range(y_val_ind,-1,-1):
-        wavelengths[ylow] = refsli_cen_wav[w_val_ind-(y_val_ind-ylow)]
+        if band[0] in ['1','2']:
+            wavelengths[ylow] = refsli_cen_wav[w_val_ind-(y_val_ind-ylow)]
+        elif band[0] in ['3','4']:
+            wavelengths[ylow] = refsli_cen_wav[w_val_ind+(y_val_ind-ylow)]
 
     ggg = y_val_ind + 1
     while alpha_pos[ggg] == alpha_pos[ggg-1]:
-        wavelengths[ggg] = refsli_cen_wav[w_val_ind+ggg-y_val_ind]
+        if band[0] in ['1','2']:
+            wavelengths[ggg] = refsli_cen_wav[w_val_ind+ggg-y_val_ind]
+        elif band[0] in ['3','4']:
+            wavelengths[ggg] = refsli_cen_wav[w_val_ind-(ggg-y_val_ind)]
         ggg = ggg + 1
 
     # Creates arrays for the y and wavel of the ref_alpha (ref_alpha = 0 usually) in the new slice
@@ -174,22 +179,37 @@ for islice in range(1,nslices+1):
     save_file.write('# Trace (isoalpha): Take pixel trace along specified slice, specified alpha position trace is built by taking the pixel in every detector row with alpha value closest to the one specified \n')
     save_file.write('# xpos[i] = np.argmin(alpha_img[i,:])+funcs.find_nearest(alpha_img[i,:][(slice_img[i,:]!=0)],alpha_pos)\n')
     save_file.write('#    alpha       x  y      center         FWHM          skewness        wavelength\n')
-    for zzz in range(0,np.size(FMetalon1A_peaks),1):
-        save_file.write(str(alpha_pos[zzz])+'  '+str(int(xpos_FMetalon1A_peaks[zzz]))+'  '+str(int(FMetalon1A_peaks[zzz]))+'  '+str(linecenter_ETAL[zzz])+'  '+str(linefwhm_ETAL[zzz])+'  '+str(lineskew_ETAL[zzz])+'  '+str(wavelengths[zzz])+'\n')
+    if etal == "ET1A":
+        for zzz in range(0,np.size(FMetalon1A_peaks),1):
+            save_file.write(str(alpha_pos[zzz])+'  '+str(int(xpos_FMetalon1A_peaks[zzz]))+'  '+str(int(FMetalon1A_peaks[zzz]))+'  '+str(linecenter_ETAL[zzz])+'  '+str(linefwhm_ETAL[zzz])+'  '+str(lineskew_ETAL[zzz])+'  '+str(wavelengths[zzz])+'\n')
+    elif etal == "ET1B":
+        for zzz in range(0,np.size(FMetalon1B_peaks),1):
+            save_file.write(str(alpha_pos[zzz])+'  '+str(int(xpos_FMetalon1B_peaks[zzz]))+'  '+str(int(FMetalon1B_peaks[zzz]))+'  '+str(linecenter_ETAL[zzz])+'  '+str(linefwhm_ETAL[zzz])+'  '+str(lineskew_ETAL[zzz])+'  '+str(wavelengths[zzz])+'\n')
+    elif etal == "ET2A":
+        for zzz in range(0,np.size(FMetalon2A_peaks),1):
+            save_file.write(str(alpha_pos[zzz])+'  '+str(int(xpos_FMetalon2A_peaks[zzz]))+'  '+str(int(FMetalon2A_peaks[zzz]))+'  '+str(linecenter_ETAL[zzz])+'  '+str(linefwhm_ETAL[zzz])+'  '+str(lineskew_ETAL[zzz])+'  '+str(wavelengths[zzz])+'\n')
+    elif etal == "ET2B":
+        for zzz in range(0,np.size(FMetalon2B_peaks),1):
+            save_file.write(str(alpha_pos[zzz])+'  '+str(int(xpos_FMetalon2B_peaks[zzz]))+'  '+str(int(FMetalon2B_peaks[zzz]))+'  '+str(linecenter_ETAL[zzz])+'  '+str(linefwhm_ETAL[zzz])+'  '+str(lineskew_ETAL[zzz])+'  '+str(wavelengths[zzz])+'\n')
     save_file.close()
     
     # Data for 2D polynomial fit:
-    x = xpos_FMetalon1A_peaks
+    if etal == "ET1A": x = xpos_FMetalon1A_peaks
+    elif etal == "ET1B": x = xpos_FMetalon1B_peaks
+    elif etal == "ET2A": x = xpos_FMetalon2A_peaks
+    elif etal == "ET2B": x = xpos_FMetalon2B_peaks
     y = linecenter_ETAL
     z = wavelengths
-
+    
     # Fit 2d polynomial to data
     try:
         m = funcs.polyfit2d(x_s,x,y,z,2)
     except ValueError:
         raise ValueError, "FIT CRASHES FOR SLICE=" + str(islice)
-        
-    m = funcs.convert_m_order2_to_order4(m)
+    
+    if len(m) == 9:
+        # 2D polynomial fit of order 2
+        m = funcs.convert_m_order2_to_order4(m)
         
     # Saves the polynomial coefficients
     save_file_pol = open(datadir + 'Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(islice)+'_coeffs.txt', 'w')

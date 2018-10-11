@@ -12,7 +12,7 @@
 # Does the 2D fit of each slice (individually)
 
 
-# In[1]:
+# In[15]:
 
 import funcs
 from distortionMaps import d2cMapping
@@ -27,7 +27,7 @@ from mpl_toolkits.mplot3d import Axes3D
 get_ipython().magic(u'matplotlib notebook')
 
 
-# In[2]:
+# In[19]:
 
 # directories
 
@@ -45,14 +45,14 @@ MRSWaveCalDir = workDir+"MRSWaveCal/"
 FTSlinefits   = MRSWaveCalDir+"FTS_ET_linefits/"
 
 # analysis inputs
-band = "2C"
-if band == '1B':usedfilter = 'SWP'
+band = "4C"
+if band in ['1B','4B']:usedfilter = 'SWP'
 elif band in ['1C','2C']: usedfilter = 'LWP'
-elif band in ['2A','2B']: usedfilter = 'Dichroic'
-etal = "ET1A" # "ET1A", "ET1B", "ET2A", "ET2B"
+elif band in ['2A','2B','4A','4C']: usedfilter = 'Dichroic'
+etal = "ET2B" # "ET1A", "ET1B", "ET2A", "ET2B"
 ref_alpha = 0.0
-ref_sli = 10
-islice = 3
+ref_sli = 6
+islice = 7
 
 # input files
 refpoint_file   = 'data/Band'+str(band)+'_{}_refslice'.format(usedfilter)+str(ref_sli)+'_alpha'+str(ref_alpha)+'_refpoint_'+user+'.txt'
@@ -61,7 +61,7 @@ pixoffsets_file = 'data/Band'+str(band)+'_{}_refslice'.format(usedfilter)+str(re
 alpha_tab       = datadir + 'Band'+str(band)+'_'+etal+'_slice'+str(islice)+'.txt'
 
 
-# In[3]:
+# In[20]:
 
 # Set of reference points
 yan_ref = np.loadtxt(refpoint_file,unpack=True,usecols=(0,1), skiprows = 5)
@@ -78,7 +78,7 @@ print "Reference Wav   = ", round(cutofflamb,3)
 print "Reference Ypix  =", round(cutoffpix,3)
 
 
-# In[4]:
+# In[21]:
 
 # Set of fitted etalon line parameters
 refsli_cen_y = np.loadtxt(fm_sol_file,unpack=True,usecols=(0,3), skiprows = 5)[1]
@@ -97,19 +97,21 @@ ET2B_linecenters = fits.open(FTS_ET2B_linefits_file)[1].data['LAMCEN'] # [micron
 
 if etal == "ET1A":
     refsli_cen_wav = ET1A_linecenters
+    alpha_pos, xpos_FMetalon1A_peaks, FMetalon1A_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
 elif etal == "ET1B":
     refsli_cen_wav = ET1B_linecenters
-if etal == "ET2A":
+    alpha_pos, xpos_FMetalon1B_peaks, FMetalon1B_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
+elif etal == "ET2A":
     refsli_cen_wav = ET2A_linecenters
+    alpha_pos, xpos_FMetalon2A_peaks, FMetalon2A_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
 elif etal == "ET2B":
     refsli_cen_wav = ET2B_linecenters
+    alpha_pos, xpos_FMetalon2B_peaks, FMetalon2B_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
 
 offsets = np.loadtxt(pixoffsets_file,unpack=True,usecols=(0,1), skiprows = 5)[1]
 
-alpha_pos, xpos_FMetalon1A_peaks, FMetalon1A_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
 
-
-# In[5]:
+# In[22]:
 
 # load distortion maps
 d2cMaps   = d2cMapping(band,cdpDir)
@@ -120,7 +122,7 @@ nslices   = d2cMaps['nslices']
 det_dims  = (1024,1032)
 
 
-# In[6]:
+# In[23]:
 
 # compute slice reference x-position
 alpha_img = np.zeros(det_dims)
@@ -130,7 +132,7 @@ alphas = alpha_img[512,:][x_coords]
 x_s = interp1d(alphas,x_coords)(0.)
 
 
-# In[7]:
+# In[24]:
 
 # Translate the wav-pixel reference point to the new slice
 ref_new = ref_vals
@@ -144,7 +146,7 @@ w_val_ind = funcs.find_nearest(refsli_cen_wav,ref_new[0])
 w_val = refsli_cen_wav[w_val_ind]
 
 
-# In[8]:
+# In[25]:
 
 # Assigns the wavelengths for ref_alpha (ref_alpha = 0 usually) in the new slice
 wavelengths = np.empty_like(alpha_pos) * 0.
@@ -156,11 +158,17 @@ if y_val < ref_new[1] and w_val > ref_new[0]:
     w_val = refsli_cen_wav[w_val_ind]
 
 for ylow in range(y_val_ind,-1,-1):
-    wavelengths[ylow] = refsli_cen_wav[w_val_ind-(y_val_ind-ylow)]
+    if band[0] in ['1','2']:
+        wavelengths[ylow] = refsli_cen_wav[w_val_ind-(y_val_ind-ylow)]
+    elif band[0] in ['3','4']:
+        wavelengths[ylow] = refsli_cen_wav[w_val_ind+(y_val_ind-ylow)]
 
 ggg = y_val_ind + 1
 while alpha_pos[ggg] == alpha_pos[ggg-1]:
-    wavelengths[ggg] = refsli_cen_wav[w_val_ind+ggg-y_val_ind]
+    if band[0] in ['1','2']:
+        wavelengths[ggg] = refsli_cen_wav[w_val_ind+ggg-y_val_ind]
+    elif band[0] in ['3','4']:
+        wavelengths[ggg] = refsli_cen_wav[w_val_ind-(ggg-y_val_ind)]
     ggg = ggg + 1
 
 for ooo in [-1,0,1]:
@@ -171,7 +179,7 @@ y_alpharef = linecenter_ETAL[:ggg]
 wav_alpharef = wavelengths[:ggg]
 
 
-# In[9]:
+# In[26]:
 
 # Assigns the wavelengths for ALL ALPHAS in the new slice
 for aaa in range(ggg,len(alpha_pos)):
@@ -190,15 +198,29 @@ save_file.write('# Distortion map version 06.04.00 - date '+str(date.today())+'\
 save_file.write('# Trace (isoalpha): Take pixel trace along specified slice, specified alpha position trace is built by taking the pixel in every detector row with alpha value closest to the one specified \n')
 save_file.write('# xpos[i] = np.argmin(alpha_img[i,:])+funcs.find_nearest(alpha_img[i,:][(slice_img[i,:]!=0)],alpha_pos)\n')
 save_file.write('#    alpha       x  y      center         FWHM          skewness        wavelength\n')
-for zzz in range(0,np.size(FMetalon1A_peaks),1):
-    save_file.write(str(alpha_pos[zzz])+'  '+str(int(xpos_FMetalon1A_peaks[zzz]))+'  '+str(int(FMetalon1A_peaks[zzz]))+'  '+str(linecenter_ETAL[zzz])+'  '+str(linefwhm_ETAL[zzz])+'  '+str(lineskew_ETAL[zzz])+'  '+str(wavelengths[zzz])+'\n')
+
+if etal == "ET1A":
+    for zzz in range(0,np.size(FMetalon1A_peaks),1):
+        save_file.write(str(alpha_pos[zzz])+'  '+str(int(xpos_FMetalon1A_peaks[zzz]))+'  '+str(int(FMetalon1A_peaks[zzz]))+'  '+str(linecenter_ETAL[zzz])+'  '+str(linefwhm_ETAL[zzz])+'  '+str(lineskew_ETAL[zzz])+'  '+str(wavelengths[zzz])+'\n')
+elif etal == "ET1B":
+    for zzz in range(0,np.size(FMetalon1B_peaks),1):
+        save_file.write(str(alpha_pos[zzz])+'  '+str(int(xpos_FMetalon1B_peaks[zzz]))+'  '+str(int(FMetalon1B_peaks[zzz]))+'  '+str(linecenter_ETAL[zzz])+'  '+str(linefwhm_ETAL[zzz])+'  '+str(lineskew_ETAL[zzz])+'  '+str(wavelengths[zzz])+'\n')
+elif etal == "ET2A":
+    for zzz in range(0,np.size(FMetalon2A_peaks),1):
+        save_file.write(str(alpha_pos[zzz])+'  '+str(int(xpos_FMetalon2A_peaks[zzz]))+'  '+str(int(FMetalon2A_peaks[zzz]))+'  '+str(linecenter_ETAL[zzz])+'  '+str(linefwhm_ETAL[zzz])+'  '+str(lineskew_ETAL[zzz])+'  '+str(wavelengths[zzz])+'\n')
+elif etal == "ET2B":
+    for zzz in range(0,np.size(FMetalon2B_peaks),1):
+        save_file.write(str(alpha_pos[zzz])+'  '+str(int(xpos_FMetalon2B_peaks[zzz]))+'  '+str(int(FMetalon2B_peaks[zzz]))+'  '+str(linecenter_ETAL[zzz])+'  '+str(linefwhm_ETAL[zzz])+'  '+str(lineskew_ETAL[zzz])+'  '+str(wavelengths[zzz])+'\n')
 save_file.close()
 
 
-# In[10]:
+# In[27]:
 
 # Data for 2D polynomial fit:
-x = xpos_FMetalon1A_peaks
+if etal == "ET1A": x = xpos_FMetalon1A_peaks
+elif etal == "ET1B": x = xpos_FMetalon1B_peaks
+elif etal == "ET2A": x = xpos_FMetalon2A_peaks
+elif etal == "ET2B": x = xpos_FMetalon2B_peaks
 y = linecenter_ETAL
 z = wavelengths
 
@@ -209,7 +231,7 @@ except ValueError:
     raise ValueError, "FIT CRASHES FOR SLICE=" + str(islice)
 
 
-# In[11]:
+# In[28]:
 
 # Evaluate the 2D polynomial fit on a regular grid...
 nx, ny = 20, 20
@@ -243,7 +265,7 @@ ax.axis('tight')
 plt.show()
 
 
-# In[12]:
+# In[29]:
 
 # Saves the polynomial coefficients
 save_file_pol = open(datadir + 'Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(islice)+'_coeffs.txt', 'w')
