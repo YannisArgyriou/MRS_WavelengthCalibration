@@ -37,10 +37,10 @@ MRSWaveCalDir = workDir+"MRSWaveCal/"
 FTSlinefits   = MRSWaveCalDir+"FTS_ET_linefits/"
 
 
-# In[3]:
+# In[9]:
 
 # give analysis inputs
-band = '4C'                     # spectral band under investigation
+band = '1B'                     # spectral band under investigation
 
 # load distortion maps
 d2cMaps   = d2cMapping(band,cdpDir)
@@ -59,7 +59,7 @@ if band == "1C":
     d2cMaps['alphaMap'][-1,:] = d2cMaps['alphaMap'][-2,:]
 
 
-# In[4]:
+# In[10]:
 
 # Load etalon MRS and RAL FTS data files and data, and subtract BKG
 if band[0] in ['1','2']:
@@ -78,11 +78,11 @@ elif band[0] in ['4']:
 
 # ### Perform analysis for all alphas in all slices
 
-# In[6]:
+# In[ ]:
 
 nslices = d2cMaps['nslices']
 
-for islice in range(11,nslices+1):
+for islice in range(1,nslices+1):
     print "Slice {}".format(islice)
     # open files to store information
     if band[0] in ['1','2']:
@@ -141,7 +141,7 @@ for islice in range(11,nslices+1):
             if user == 'yannis':
                 etalon1A_fm_data[np.isnan(etalon1A_fm_data)] = -1
                 FMetalon1A_peaks = funcs.find_peaks(etalon1A_fm_data,thres=thres_e1a,min_dist=min_dist_e1a)
-                FMetalon1A_peaks = FMetalon1A_peaks[(FMetalon1A_peaks>1) & (FMetalon1A_peaks<1022)]
+                FMetalon1A_peaks = FMetalon1A_peaks[(FMetalon1A_peaks>4) & (FMetalon1A_peaks<1022)]
             if user == 'alvaro':
                 picos_1A, y_pixs_1A = funcs.find_max(etalon1A_fm_data,np.arange(1,1025,1.),maxcut_1a,toler_1a) # maxcut, wavel_toler
                 picos_inds_1A = y_pixs_1A-1
@@ -149,12 +149,12 @@ for islice in range(11,nslices+1):
             etalon1A_fm_data[(etalon1A_fm_data == -1)] = np.nan
             etalon1A_fm_data_noNaN = etalon1A_fm_data.copy()
             etalon1A_fm_data_noNaN[np.isnan(etalon1A_fm_data)] = 0.
-
+            
             #--FM Etalon_1B data
             if user == 'yannis':
                 etalon1B_fm_data[np.isnan(etalon1B_fm_data)] = -1
                 FMetalon1B_peaks = funcs.find_peaks(etalon1B_fm_data,thres=thres_e1b,min_dist=min_dist_e1b)
-                FMetalon1B_peaks = FMetalon1B_peaks[(FMetalon1B_peaks>1) & (FMetalon1B_peaks<1022)]
+                FMetalon1B_peaks = FMetalon1B_peaks[(FMetalon1B_peaks>4) & (FMetalon1B_peaks<1022)]
             if user == 'alvaro':
                 picos_1B, y_pixs_1B = funcs.find_max(etalon1B_fm_data,np.arange(1,1025,1.),maxcut_1b,toler_1b) # maxcut, wavel_toler
                 picos_inds_1B = y_pixs_1B-1
@@ -174,6 +174,19 @@ for islice in range(11,nslices+1):
             linecenter_ET1B = funcs.get_linecenter(FMetalon1B_fitparams,ET1B_fitting_flag)
             linefwhm_ET1B   = funcs.get_FWHM(FMetalon1B_fitparams,ET1B_fitting_flag)
             lineskew_ET1B   = funcs.get_skewness(FMetalon1B_fitparams,ET1B_fitting_flag)
+            
+            if len(np.where(linecenter_ET1A<0)[0]) != 0:
+                idx = np.where(linecenter_ET1A<0)[0]
+                print 'Bad line fit for line at: {}pix'.format(FMetalon1A_peaks[idx])
+                linecenter_ET1A[idx] = (linecenter_ET1A[idx-1]+linecenter_ET1A[idx+1])/2.
+                linefwhm_ET1A[idx] = (linefwhm_ET1A[idx-1]+linefwhm_ET1A[idx+1])/2.
+                lineskew_ET1A[idx] = (lineskew_ET1A[idx-1]+lineskew_ET1A[idx+1])/2.
+            if len(np.where(linecenter_ET1B<0)[0]) != 0:
+                idx = np.where(linecenter_ET1B<0)[0]
+                print 'Bad line fit for line at: {}pix'.format(FMetalon1B_peaks[idx])
+                linecenter_ET1B[idx] = (linecenter_ET1B[idx-1]+linecenter_ET1B[idx+1])/2.
+                linefwhm_ET1B[idx] = (linefwhm_ET1B[idx-1]+linefwhm_ET1B[idx+1])/2.
+                lineskew_ET1B[idx] = (lineskew_ET1B[idx-1]+lineskew_ET1B[idx+1])/2.
 
             # SAVES fits of FM - ETALON 1A
             for zzz in range(0,np.size(FMetalon1A_peaks),1):
@@ -192,7 +205,7 @@ for islice in range(11,nslices+1):
             if user == 'yannis':
                 etalon2B_fm_data[np.isnan(etalon2B_fm_data)] = -1
                 FMetalon2B_peaks = funcs.find_peaks(etalon2B_fm_data,thres=thres_e2b,min_dist=min_dist_e2b)
-                FMetalon2B_peaks = FMetalon2B_peaks[(FMetalon2B_peaks>1) & (FMetalon2B_peaks<1022) & (etalon2B_fm_data[FMetalon2B_peaks]>0)]
+                FMetalon2B_peaks = FMetalon2B_peaks[(FMetalon2B_peaks>4) & (FMetalon2B_peaks<1022) & (etalon2B_fm_data[FMetalon2B_peaks]>0)]
             if user == 'alvaro':
                 picos_2B, y_pixs_2B = funcs.find_max(etalon2B_fm_data,np.arange(1,1025,1.),maxcut_1a,toler_1a) # maxcut, wavel_toler
                 picos_inds_2B = y_pixs_2B-1
