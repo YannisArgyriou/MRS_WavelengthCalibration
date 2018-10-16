@@ -18,7 +18,7 @@ from mpl_toolkits.mplot3d import Axes3D
 get_ipython().magic(u'matplotlib notebook')
 
 
-# In[3]:
+# In[2]:
 
 # directories
 
@@ -34,16 +34,16 @@ datadir = "data/"
 cdpDir = workDir+"cdp_data/"
 
 # analysis inputs
-band = "4C"
-etal = "ET2B" # "ET1A", "ET1B", "ET2A", "ET2B"
-islice = 10
+band = "2B"
+etal = "ET1B" # "ET1A", "ET1B", "ET2A", "ET2B"
+islice = 17
 
 # load new wavelength solution
 wavsolution_file   = 'data/Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(islice)+'_coeffs.txt'
 slice_wavcoeffs = np.loadtxt(wavsolution_file,unpack=True, skiprows = 5)
 
 
-# In[4]:
+# In[3]:
 
 # load distortion maps
 d2cMaps   = d2cMapping(band,cdpDir)
@@ -61,7 +61,7 @@ alphas = alpha_img[512,:][x_coords]
 xs = interp1d(alphas,x_coords)(0.)
 
 
-# In[5]:
+# In[4]:
 
 fileversion = "06.04.00"
 distcdp = {}
@@ -82,13 +82,13 @@ distcdp["2B"] = distcdp["1B"]
 distcdp["2A"] = distcdp["1A"]
 
 
-# In[6]:
+# In[5]:
 
 band_distCDP = fits.open(cdpDir+distcdp[band])
 slice_wavcoeffs_cdp = np.array(band_distCDP['Lambda_CH{}'.format(band[0])].data[islice-1])
 
 
-# In[7]:
+# In[6]:
 
 print '------DISTORTION CDP version {}--------'.format(fileversion)
 print 'Reference x-position: {}pix'.format(round(slice_wavcoeffs_cdp[0],2))
@@ -99,7 +99,7 @@ print 'Reference x-position: {}pix'.format(round(xs,2))
 print '2D polynomial coefficients: {}'.format(slice_wavcoeffs)
 
 
-# In[8]:
+# In[7]:
 
 channel = int(band[0])
 new_lambdaMap  = np.zeros(sliceMap.shape)
@@ -121,21 +121,42 @@ for islice in range(1,nslices+1):
     x_coords = np.nonzero(alpha_img[512,:])[0]
     alphas = alpha_img[512,:][x_coords]
     xs = interp1d(alphas,x_coords)(0.)
-    for i in range(5):
-        for j in range(5):
-            cIndex = i*5 + j
-            lambdas   = lambdas + lp[cIndex]*(pixelCtrx-xs)**j * pixelCtry**i
-    new_lambdaMap[pixelCtry,pixelCtrx]   = lambdas
+    
+    new_lambdaMap[pixelCtry,pixelCtrx]   = funcs.polyval2d(xs,pixelCtrx, pixelCtry, lp)
 
 
-# In[9]:
+# In[8]:
 
 plt.figure()
 plt.imshow(new_lambdaMap)
 plt.tight_layout()
 
-plt.figure()
-plt.imshow(new_lambdaMap-lambdaMap)
+row = 512
+plt.figure(figsize=(12,4))
+if band[0] in ['1','4']:
+    plt.plot(lambdaMap[row,:],label='CDP WaveCal')
+    plt.plot(new_lambdaMap[row,:],label='New WaveCal')
+    plt.xlim(0,512)
+    plt.ylim(lambdaMap[row,:512].max()-0.1,lambdaMap[row,:512].max())
+elif band[0] in ['2','3']:
+    plt.plot(lambdaMap[row,:],label='CDP WaveCal')
+    plt.plot(new_lambdaMap[row,:],label='New WaveCal')
+    plt.xlim(512,1032)
+    plt.ylim(lambdaMap[row,512:].max()-0.1,lambdaMap[row,512:].max())
+plt.xlabel('Detector x-coord [pix]')
+plt.ylabel('Wavelength [micron]')
+plt.legend(loc='upper right')
+plt.tight_layout()
+
+plt.figure(figsize=(12,4))
+plt.imshow(new_lambdaMap-lambdaMap,aspect=0.2)
+plt.tight_layout()
+
+
+# In[9]:
+
+plt.figure(figsize=(12,4))
+plt.imshow(sliceMap,aspect=0.2)
 plt.tight_layout()
 
 

@@ -37,10 +37,10 @@ MRSWaveCalDir = workDir+"MRSWaveCal/"
 FTSlinefits   = MRSWaveCalDir+"FTS_ET_linefits/"
 
 
-# In[9]:
+# In[3]:
 
 # give analysis inputs
-band = '1B'                     # spectral band under investigation
+band = '2A'                     # spectral band under investigation
 
 # load distortion maps
 d2cMaps   = d2cMapping(band,cdpDir)
@@ -59,7 +59,7 @@ if band == "1C":
     d2cMaps['alphaMap'][-1,:] = d2cMaps['alphaMap'][-2,:]
 
 
-# In[10]:
+# In[4]:
 
 # Load etalon MRS and RAL FTS data files and data, and subtract BKG
 if band[0] in ['1','2']:
@@ -78,7 +78,7 @@ elif band[0] in ['4']:
 
 # ### Perform analysis for all alphas in all slices
 
-# In[ ]:
+# In[5]:
 
 nslices = d2cMaps['nslices']
 
@@ -141,7 +141,7 @@ for islice in range(1,nslices+1):
             if user == 'yannis':
                 etalon1A_fm_data[np.isnan(etalon1A_fm_data)] = -1
                 FMetalon1A_peaks = funcs.find_peaks(etalon1A_fm_data,thres=thres_e1a,min_dist=min_dist_e1a)
-                FMetalon1A_peaks = FMetalon1A_peaks[(FMetalon1A_peaks>4) & (FMetalon1A_peaks<1022)]
+                FMetalon1A_peaks = FMetalon1A_peaks[(FMetalon1A_peaks>4) & (FMetalon1A_peaks<1020)]
             if user == 'alvaro':
                 picos_1A, y_pixs_1A = funcs.find_max(etalon1A_fm_data,np.arange(1,1025,1.),maxcut_1a,toler_1a) # maxcut, wavel_toler
                 picos_inds_1A = y_pixs_1A-1
@@ -154,7 +154,7 @@ for islice in range(1,nslices+1):
             if user == 'yannis':
                 etalon1B_fm_data[np.isnan(etalon1B_fm_data)] = -1
                 FMetalon1B_peaks = funcs.find_peaks(etalon1B_fm_data,thres=thres_e1b,min_dist=min_dist_e1b)
-                FMetalon1B_peaks = FMetalon1B_peaks[(FMetalon1B_peaks>4) & (FMetalon1B_peaks<1022)]
+                FMetalon1B_peaks = FMetalon1B_peaks[(FMetalon1B_peaks>4) & (FMetalon1B_peaks<1020)]
             if user == 'alvaro':
                 picos_1B, y_pixs_1B = funcs.find_max(etalon1B_fm_data,np.arange(1,1025,1.),maxcut_1b,toler_1b) # maxcut, wavel_toler
                 picos_inds_1B = y_pixs_1B-1
@@ -193,8 +193,13 @@ for islice in range(1,nslices+1):
                 save_et1a.write(str(alpha_pos)+'  '+str(xpos[FMetalon1A_peaks[zzz]])+'  '+str(FMetalon1A_peaks[zzz])+'  '+str(linecenter_ET1A[zzz])+'  '+str(linefwhm_ET1A[zzz])+'  '+str(lineskew_ET1A[zzz])+'\n')
 
             # SALVA fits of FM - ETALON 1B
-            for zzz in range(0,np.size(FMetalon1B_peaks),1):
-                save_et1b.write(str(alpha_pos)+'  '+str(xpos[FMetalon1B_peaks[zzz]])+'  '+str(FMetalon1B_peaks[zzz])+'  '+str(linecenter_ET1B[zzz])+'  '+str(linefwhm_ET1B[zzz])+'  '+str(lineskew_ET1B[zzz])+'\n')
+            if (band == '1B') & (islice == 7) & (alpha_pos in alphas_inslice[1:3]): continue
+            elif (band == '1B') & (islice == 6) & (alpha_pos == alphas_inslice[1]): continue
+            elif (band == '1B') & (islice == 20) & (alpha_pos == alphas_inslice[11]): continue
+            elif (band == '1B') & (islice == 18) & (alpha_pos in alphas_inslice[6:8]): continue
+            else:
+                for zzz in range(0,np.size(FMetalon1B_peaks),1):
+                    save_et1b.write(str(alpha_pos)+'  '+str(xpos[FMetalon1B_peaks[zzz]])+'  '+str(FMetalon1B_peaks[zzz])+'  '+str(linecenter_ET1B[zzz])+'  '+str(linefwhm_ET1B[zzz])+'  '+str(lineskew_ET1B[zzz])+'\n')
 
         elif band[0] in ['4']:
             #--FM data
@@ -205,7 +210,7 @@ for islice in range(1,nslices+1):
             if user == 'yannis':
                 etalon2B_fm_data[np.isnan(etalon2B_fm_data)] = -1
                 FMetalon2B_peaks = funcs.find_peaks(etalon2B_fm_data,thres=thres_e2b,min_dist=min_dist_e2b)
-                FMetalon2B_peaks = FMetalon2B_peaks[(FMetalon2B_peaks>4) & (FMetalon2B_peaks<1022) & (etalon2B_fm_data[FMetalon2B_peaks]>0)]
+                FMetalon2B_peaks = FMetalon2B_peaks[(FMetalon2B_peaks>4) & (FMetalon2B_peaks<1020) & (etalon2B_fm_data[FMetalon2B_peaks]>0)]
             if user == 'alvaro':
                 picos_2B, y_pixs_2B = funcs.find_max(etalon2B_fm_data,np.arange(1,1025,1.),maxcut_1a,toler_1a) # maxcut, wavel_toler
                 picos_inds_2B = y_pixs_2B-1

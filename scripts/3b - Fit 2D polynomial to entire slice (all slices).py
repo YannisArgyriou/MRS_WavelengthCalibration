@@ -18,7 +18,7 @@ from mpl_toolkits.mplot3d import Axes3D
 get_ipython().magic(u'matplotlib notebook')
 
 
-# In[9]:
+# In[2]:
 
 # directories
 
@@ -36,7 +36,7 @@ MRSWaveCalDir = workDir+"MRSWaveCal/"
 FTSlinefits   = MRSWaveCalDir+"FTS_ET_linefits/"
 
 # analysis inputs
-band = '1B'
+band = '2B'
 if band in ['1B','4B']:usedfilter = 'SWP'
 elif band in ['1C','2C']: usedfilter = 'LWP'
 elif band in ['2A','2B','4A','4C']: usedfilter = 'Dichroic'
@@ -52,7 +52,7 @@ fm_sol_file     = 'data/Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(ref_sli)+
 pixoffsets_file = 'data/Band'+str(band)+'_{}_refslice'.format(usedfilter)+str(ref_sli)+'_alpha'+str(ref_alpha)+'_reloffsets.txt'
 
 
-# In[10]:
+# In[3]:
 
 # load distortion maps
 d2cMaps   = d2cMapping(band,cdpDir)
@@ -63,7 +63,7 @@ nslices   = d2cMaps['nslices']
 det_dims  = (1024,1032)
 
 
-# In[11]:
+# In[4]:
 
 # Set of reference points
 yan_ref = np.loadtxt(refpoint_file,unpack=True,usecols=(0,1), skiprows = 5)
@@ -80,7 +80,7 @@ print "Reference Wav   = ", round(cutofflamb,3)
 print "Reference Ypix  =", round(cutoffpix,3)
 
 
-# In[12]:
+# In[5]:
 
 # Set of fitted etalon line parameters
 refsli_cen_y = np.loadtxt(fm_sol_file,unpack=True,usecols=(0,3), skiprows = 5)[1]
@@ -103,13 +103,13 @@ elif etal == "ET2A":refsli_cen_wav = ET2A_linecenters
 elif etal == "ET2B":refsli_cen_wav = ET2B_linecenters
 
 
-# In[13]:
+# In[6]:
 
 # pixel offsets per slice
 offsets = np.loadtxt(pixoffsets_file,unpack=True,usecols=(0,1), skiprows = 5)[1]
 
 
-# In[14]:
+# In[7]:
 
 # Catch exception: Not all slice will be positioned the same way w.r.t. their respective reference point
 # We identify three different cases:
@@ -148,9 +148,10 @@ for islice in range(1,nslices+1):
 print 'Dominant case is case {}, with an occurence rate {} out of {} slices'.format(np.argmax(counters)+1,counters,nslices)
 
 
-# In[15]:
+# In[19]:
 
-for islice in [19]: # range(1,nslices+1):
+plot = True
+for islice in [10]:# range(1,nslices+1):
     print 'Slice {}'.format(islice)
     alpha_tab = datadir + 'Band'+str(band)+'_'+etal+'_slice'+str(islice)+'.txt'
     if etal == "ET1A":alpha_pos, xpos_FMetalon1A_peaks, FMetalon1A_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
@@ -211,13 +212,30 @@ for islice in [19]: # range(1,nslices+1):
     wav_alpharef = wavelengths[:ggg]
     
     # Assigns the wavelengths for ALL ALPHAS in the new slice
-    for aaa in range(ggg,len(alpha_pos)):
-        new_y_val_ind = funcs.find_nearest(y_alpharef,linecenter_ETAL[aaa]) # find etalon line in central trace that is closest to etalon line in nearby slice
-        wavelengths[aaa] = wav_alpharef[new_y_val_ind] # assign same wavelength to etalon line in nearby slice as the closest etalon line in the central slice
-        # Check for extra etalon line at the end of array
-        if wavelengths[aaa] == wavelengths[aaa-1]:
-            idx = funcs.find_nearest(refsli_cen_wav,wavelengths[aaa])
-            wavelengths[aaa] = refsli_cen_wav[idx+1]
+    alpha_positions = np.unique(alpha_pos[np.nonzero(alpha_pos)])
+    for alpha_position in alpha_positions:
+        idx0 = np.where(alpha_pos == alpha_position)[0][0]
+        y_val_ind = funcs.find_nearest(linecenter_ETAL[np.where(alpha_pos == alpha_position)],ref_new[1]) + idx0
+        if (band == '2A') & (etal=='ET1A') & (alpha_position>0.5): y_val_ind -=1
+        if (band == '2B') & (etal=='ET1B') & (alpha_position>0.9): y_val_ind +=1
+        y_val = linecenter_ETAL[y_val_ind]
+        
+        for ylow in range(y_val_ind-idx0+1):
+            if band[0] in ['1','2']:
+                wavelengths[y_val_ind-ylow] = refsli_cen_wav[w_val_ind-ylow]
+            elif band[0] in ['3','4']:
+                wavelengths[y_val_ind-ylow] = refsli_cen_wav[w_val_ind+ylow]
+        
+        ggg = y_val_ind + 1
+        while alpha_pos[ggg] == alpha_pos[ggg-1]:
+            if band[0] in ['1','2']:
+                wavelengths[ggg] = refsli_cen_wav[w_val_ind+ggg-y_val_ind]
+            elif band[0] in ['3','4']:
+                wavelengths[ggg] = refsli_cen_wav[w_val_ind-(ggg-y_val_ind)]
+            if ggg == len(alpha_pos)-1:
+                break
+            else:
+                ggg = ggg + 1
 
     # Saves the wavelengths in a file *wav_sol.txt
     save_file = open(datadir + 'Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(islice)+'_wavels.txt', 'w')
@@ -257,41 +275,42 @@ for islice in [19]: # range(1,nslices+1):
     if len(m) == 9:
         # 2D polynomial fit of order 2
         m = funcs.convert_m_order2_to_order4(m)
-        
-    # Evaluate the 2D polynomial fit on a regular grid...
-    nx, ny = 20, 20
-    xx, yy = np.meshgrid(np.linspace(x.min(), x.max(), nx),
-                         np.linspace(y.min(), y.max(), ny))
-    zz = funcs.polyval2d(x_s,xx, yy, m)
-
-    # Plot trace and isolambda
-    plt.figure(figsize=(5,8))
-    plt.title("Slice="+str(islice))
-    for lll in refsli_cen_wav:
-        indices_isolam = np.where(wavelengths == lll)
-        x_isolam = x[indices_isolam[0]]
-        y_isolam = y[indices_isolam[0]]
-        plt.plot(x_isolam,y_isolam,".")
-    plt.scatter(x,y, c=z)
-    plt.scatter(x[0:ggg],y[0:ggg], c="r",marker="s")
-    plt.show()
     
-    plt.figure()
-    plt.plot(zz[zz.shape[0]/2])
-    plt.tight_layout()
+    if plot:
+        # Evaluate the 2D polynomial fit on a regular grid...
+        nx, ny = 20, 20
+        xx, yy = np.meshgrid(np.linspace(x.min(), x.max(), nx),
+                             np.linspace(y.min(), y.max(), ny))
+        zz = funcs.polyval2d(x_s,xx, yy, m)
 
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.gca(projection='3d')
-    ax.plot_surface(xx, yy, zz, rstride=1, cstride=1, alpha=0.2)
-    ax.scatter(x,y, z,c=z)
-    ax.scatter(x[0:ggg],y[0:ggg],z[0:ggg], c="r",marker="s")
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    ax.set_zlabel('Wavelength')
-    plt.title("Slice="+str(islice))
-    ax.axis('equal')
-    ax.axis('tight')
-    plt.show()
+        # Plot trace and isolambda
+        plt.figure(figsize=(5,8))
+        plt.title("Slice="+str(islice))
+        for lll in refsli_cen_wav:
+            indices_isolam = np.where(wavelengths == lll)
+            x_isolam = x[indices_isolam[0]]
+            y_isolam = y[indices_isolam[0]]
+            plt.plot(x_isolam,y_isolam,".")
+        plt.scatter(x,y, c=z)
+        plt.scatter(x[0:ggg],y[0:ggg], c="r",marker="s")
+        plt.show()
+
+        plt.figure()
+        plt.plot(zz[zz.shape[0]/2])
+        plt.tight_layout()
+
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.gca(projection='3d')
+        ax.plot_surface(xx, yy, zz, rstride=1, cstride=1, alpha=0.2)
+        ax.scatter(x,y, z,c=z)
+        ax.scatter(x[0:ggg],y[0:ggg],z[0:ggg], c="r",marker="s")
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        ax.set_zlabel('Wavelength')
+        plt.title("Slice="+str(islice))
+        ax.axis('equal')
+        ax.axis('tight')
+        plt.show()
         
     # Saves the polynomial coefficients
     save_file_pol = open(datadir + 'Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(islice)+'_coeffs.txt', 'w')

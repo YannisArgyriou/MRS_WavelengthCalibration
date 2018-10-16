@@ -36,14 +36,14 @@ MRSWaveCalDir = workDir+"MRSWaveCal/"
 FTSlinefits   = MRSWaveCalDir+"FTS_ET_linefits/"
 
 
-# In[3]:
+# In[36]:
 
 # give analysis inputs
-band = '4C'                     # spectral band under investigation
-islice = 11                     # slice number (equivalent to beta position)
+band = '2A'                     # spectral band under investigation
+islice = 17                     # slice number (equivalent to beta position)
 
 
-# In[4]:
+# In[37]:
 
 # open files to store information
 if band[0] in ['1','2']:
@@ -69,7 +69,7 @@ elif band[0] in ['4']:
     save_et2b.write('#    alpha       x  y      center         FWHM          skewness\n')
 
 
-# In[5]:
+# In[38]:
 
 # load distortion maps
 d2cMaps   = d2cMapping(band,cdpDir)
@@ -80,7 +80,7 @@ nslices   = d2cMaps['nslices']
 det_dims  = (1024,1032)
 
 
-# In[6]:
+# In[39]:
 
 # To account for the problematic lines at the top of the distorion maps
 ## WARNING: This should only be done for band 1C (and only if the distortion CDP version 06.04.00 is used, not the CDP7 version).
@@ -91,7 +91,7 @@ if band == "1C":
     d2cMaps['alphaMap'][-1,:] = d2cMaps['alphaMap'][-2,:]
 
 
-# In[7]:
+# In[40]:
 
 # Load etalon MRS and RAL FTS data files and data, and subtract BKG
 if band[0] in ['1','2']:
@@ -108,7 +108,7 @@ elif band[0] in ['4']:
     etalon2B_img = sci_etalon2B_img-bkg_etalon2B_img
 
 
-# In[8]:
+# In[41]:
 
 # Traces for each isoalpha are identified based on the following criteria:
 if band[0] in ['1','2']:
@@ -117,7 +117,7 @@ elif band[0] in ['4']:
     alpha_high,alpha_low,thres_e2b,min_dist_e2b,sigma0_e2b = funcs.etalon_line_params(band)
 
 
-# In[9]:
+# In[42]:
 
 alphas_inslice = funcs.slice_alphapositions(band,d2cMaps,sliceID=islice)
 alphas_inslice = np.append(0,alphas_inslice)  # To include alpha=0, and put it at the beginning of the array
@@ -130,9 +130,19 @@ print 'Along-slice positions: {} arcseconds'.format(alphas_inslice)
 
 # ### Perform analysis for single trace (use for debugging, if need be)
 
-# In[10]:
+# In[47]:
 
-alpha_pos = alphas_inslice[4]
+plt.figure(figsize=(12,4))
+for alpha_pos in alphas_inslice:
+# for alpha_pos in [alphas_inslice[6]]:
+    ypos,xpos = funcs.detpixel_trace(band,d2cMaps,sliceID=islice,alpha_pos=alpha_pos)
+    plt.plot(etalon1A_img[ypos,xpos])
+plt.tight_layout()
+
+
+# In[59]:
+
+alpha_pos = alphas_inslice[1]
 
 # Take pixel trace along specified slice, specified alpha position trace is built by taking the pixel in every detector row with alpha value closest to the one specified
 ypos,xpos = funcs.detpixel_trace(band,d2cMaps,sliceID=islice,alpha_pos=alpha_pos)
@@ -149,7 +159,7 @@ plt.imshow(valid_img,cmap='gray',alpha=0.7,zorder=1)
 plt.tight_layout()
 
 
-# In[11]:
+# In[60]:
 
 # Choose data regions
 if band[0] in ['1','2']:
@@ -162,7 +172,7 @@ if band[0] in ['1','2']:
     if user == 'yannis':
         etalon1A_fm_data[np.isnan(etalon1A_fm_data)] = -1
         FMetalon1A_peaks = funcs.find_peaks(etalon1A_fm_data,thres=thres_e1a,min_dist=min_dist_e1a)
-        FMetalon1A_peaks = FMetalon1A_peaks[(FMetalon1A_peaks>1) & (FMetalon1A_peaks<1022)]
+        FMetalon1A_peaks = FMetalon1A_peaks[(FMetalon1A_peaks>4) & (FMetalon1A_peaks<1020)]
     if user == 'alvaro':
         picos_1A, y_pixs_1A = funcs.find_max(etalon1A_fm_data,np.arange(1,1025,1.),maxcut_1a,toler_1a) # maxcut, wavel_toler
         picos_inds_1A = y_pixs_1A-1
@@ -175,7 +185,7 @@ if band[0] in ['1','2']:
     if user == 'yannis':
         etalon1B_fm_data[np.isnan(etalon1B_fm_data)] = -1
         FMetalon1B_peaks = funcs.find_peaks(etalon1B_fm_data,thres=thres_e1b,min_dist=min_dist_e1b)
-        FMetalon1B_peaks = FMetalon1B_peaks[(FMetalon1B_peaks>1) & (FMetalon1B_peaks<1022)]
+        FMetalon1B_peaks = FMetalon1B_peaks[(FMetalon1B_peaks>4) & (FMetalon1B_peaks<1020)]
     if user == 'alvaro':
         picos_1B, y_pixs_1B = funcs.find_max(etalon1B_fm_data,np.arange(1,1025,1.),maxcut_1b,toler_1b) # maxcut, wavel_toler
         picos_inds_1B = y_pixs_1B-1
@@ -195,7 +205,7 @@ elif band[0] in ['4']:
     if user == 'yannis':
         etalon2B_fm_data[np.isnan(etalon2B_fm_data)] = -1
         FMetalon2B_peaks = funcs.find_peaks(etalon2B_fm_data,thres=thres_e2b,min_dist=min_dist_e2b)
-        FMetalon2B_peaks = FMetalon2B_peaks[(FMetalon2B_peaks>1) & (FMetalon2B_peaks<1022) & (etalon2B_fm_data[FMetalon2B_peaks]>0)]
+        FMetalon2B_peaks = FMetalon2B_peaks[(FMetalon2B_peaks>4) & (FMetalon2B_peaks<1020) & (etalon2B_fm_data[FMetalon2B_peaks]>0)]
     if user == 'alvaro':
         picos_2B, y_pixs_2B = funcs.find_max(etalon2B_fm_data,np.arange(1,1025,1.),maxcut_1a,toler_1a) # maxcut, wavel_toler
         picos_inds_2B = y_pixs_2B-1
@@ -203,11 +213,11 @@ elif band[0] in ['4']:
     etalon2B_fm_data[(etalon2B_fm_data == -1)] = np.nan
     etalon2B_fm_data_noNaN = etalon2B_fm_data.copy()
     etalon2B_fm_data_noNaN[np.isnan(etalon2B_fm_data)] = 0.
-
+    
     print("Number of identified etalon lines :     [alpha = "+str(alpha_pos)+"]\n FM ET_2B etalon data: {} lines".format(len(FMetalon2B_peaks)))
 
 
-# In[12]:
+# In[61]:
 
 if band[0] in ['1','2']:
     fig,axs = plt.subplots(2,1,figsize=(12,8))
@@ -238,17 +248,17 @@ elif band[0] in ['4']:
     plt.tight_layout()
 
 
-# In[25]:
+# In[62]:
 
 if band[0] in ['1','2']:
     FMetalon1A_fitparams,FMetalon1A_fiterrors,fitting_flag,range_ini,range_fin = funcs.fit_etalon_lines(np.arange(det_dims[0]),etalon1A_fm_data_noNaN,FMetalon1A_peaks,fit_func='skewed_voight',sigma0=sigma0_e1a,f0=0.5,a0=0.1)
-
+    
     linecenter_ET1A = funcs.get_linecenter(FMetalon1A_fitparams,fitting_flag)
     linefwhm_ET1A   = funcs.get_FWHM(FMetalon1A_fitparams,fitting_flag)
     lineskew_ET1A   = funcs.get_skewness(FMetalon1A_fitparams,fitting_flag)
 
 
-# In[26]:
+# In[63]:
 
 if band[0] in ['1','2']:
     linecenter = linecenter_ET1A
@@ -288,7 +298,7 @@ if band[0] in ['1','2']:
     plt.tight_layout()
 
 
-# In[27]:
+# In[64]:
 
 if band[0] in ['1','2']:
     FMetalon1B_fitparams,FMetalon1B_fiterrors,fitting_flag,range_ini,range_fin = funcs.fit_etalon_lines(np.arange(det_dims[0]),etalon1B_fm_data_noNaN,FMetalon1B_peaks,fit_func='skewed_voight',sigma0=sigma0_e1b,f0=0.5,a0=0.1)
@@ -298,12 +308,19 @@ if band[0] in ['1','2']:
     lineskew_ET1B   = funcs.get_skewness(FMetalon1B_fitparams,fitting_flag)
 
 
-# In[28]:
+# In[65]:
 
 if band[0] in ['1','2']:
     linecenter = linecenter_ET1B
     linefwhm = linefwhm_ET1B
     lineskew = lineskew_ET1B
+    
+    if len(np.where(linecenter<0)[0]) != 0:
+        idx = np.where(linecenter<0)[0]
+        print 'Bad line fit for line at: {}pix'.format(linecenter[idx])
+        linecenter[idx] = (linecenter[idx-1]+linecenter[idx+1])/2.
+        linefwhm[idx] = (linefwhm[idx-1]+linefwhm[idx+1])/2.
+        lineskew[idx] = (lineskew[idx-1]+lineskew[idx+1])/2.
 
     sel1 = np.isfinite(np.array(linefwhm))
     popt1 = np.polyfit(np.array(linecenter)[sel1],np.array(linefwhm)[sel1],4)
@@ -337,7 +354,7 @@ if band[0] in ['1','2']:
     plt.tight_layout()
 
 
-# In[29]:
+# In[66]:
 
 if band[0] in ['4']:
     FMetalon2B_fitparams,FMetalon2B_fiterrors,fitting_flag,range_ini,range_fin = funcs.fit_etalon_lines(np.arange(det_dims[0]),etalon2B_fm_data_noNaN,FMetalon2B_peaks,fit_func='skewed_voight',sigma0=sigma0_e2b,f0=0.5,a0=0.1)
@@ -347,7 +364,7 @@ if band[0] in ['4']:
     lineskew_ET2B   = funcs.get_skewness(FMetalon2B_fitparams,fitting_flag) 
 
 
-# In[30]:
+# In[67]:
 
 if band[0] in ['4']:
     linecenter = linecenter_ET2B
@@ -388,7 +405,7 @@ if band[0] in ['4']:
 
 # ### Perform analysis for all alphas in slice
 
-# In[31]:
+# In[68]:
 
 plot = False
 for alpha_pos in alphas_inslice:
@@ -412,7 +429,7 @@ for alpha_pos in alphas_inslice:
         if user == 'yannis':
             etalon1A_fm_data[np.isnan(etalon1A_fm_data)] = -1
             FMetalon1A_peaks = funcs.find_peaks(etalon1A_fm_data,thres=thres_e1a,min_dist=min_dist_e1a)
-            FMetalon1A_peaks = FMetalon1A_peaks[(FMetalon1A_peaks>1) & (FMetalon1A_peaks<1022)]
+            FMetalon1A_peaks = FMetalon1A_peaks[(FMetalon1A_peaks>4) & (FMetalon1A_peaks<1022)]
         if user == 'alvaro':
             picos_1A, y_pixs_1A = funcs.find_max(etalon1A_fm_data,np.arange(1,1025,1.),maxcut_1a,toler_1a) # maxcut, wavel_toler
             picos_inds_1A = y_pixs_1A-1
@@ -425,7 +442,7 @@ for alpha_pos in alphas_inslice:
         if user == 'yannis':
             etalon1B_fm_data[np.isnan(etalon1B_fm_data)] = -1
             FMetalon1B_peaks = funcs.find_peaks(etalon1B_fm_data,thres=thres_e1b,min_dist=min_dist_e1b)
-            FMetalon1B_peaks = FMetalon1B_peaks[(FMetalon1B_peaks>1) & (FMetalon1B_peaks<1022)]
+            FMetalon1B_peaks = FMetalon1B_peaks[(FMetalon1B_peaks>4) & (FMetalon1B_peaks<1022)]
         if user == 'alvaro':
             picos_1B, y_pixs_1B = funcs.find_max(etalon1B_fm_data,np.arange(1,1025,1.),maxcut_1b,toler_1b) # maxcut, wavel_toler
             picos_inds_1B = y_pixs_1B-1
@@ -446,13 +463,32 @@ for alpha_pos in alphas_inslice:
         linefwhm_ET1B   = funcs.get_FWHM(FMetalon1B_fitparams,ET1B_fitting_flag)
         lineskew_ET1B   = funcs.get_skewness(FMetalon1B_fitparams,ET1B_fitting_flag)
 
+        if len(np.where((linecenter_ET1A<0)&(linecenter_ET1A>1024))[0]) != 0:
+            idx = np.where((linecenter_ET1A<0)&(linecenter_ET1A>1024))[0]
+            print 'Bad line fit for line at: {}pix'.format(FMetalon1A_peaks[idx])
+            linecenter_ET1A[idx] = (linecenter_ET1A[idx-1]+linecenter_ET1A[idx+1])/2.
+            linefwhm_ET1A[idx] = (linefwhm_ET1A[idx-1]+linefwhm_ET1A[idx+1])/2.
+            lineskew_ET1A[idx] = (lineskew_ET1A[idx-1]+lineskew_ET1A[idx+1])/2.
+        if len(np.where((linecenter_ET1B<0)&(linecenter_ET1B>1024))[0]) != 0:
+            idx = np.where((linecenter_ET1B<0)&(linecenter_ET1B>1024))[0]
+            print 'Bad line fit for line at: {}pix'.format(FMetalon1B_peaks[idx])
+            linecenter_ET1B[idx] = (linecenter_ET1B[idx-1]+linecenter_ET1B[idx+1])/2.
+            linefwhm_ET1B[idx] = (linefwhm_ET1B[idx-1]+linefwhm_ET1B[idx+1])/2.
+            lineskew_ET1B[idx] = (lineskew_ET1B[idx-1]+lineskew_ET1B[idx+1])/2.
+
         # SAVES fits of FM - ETALON 1A
         for zzz in range(0,np.size(FMetalon1A_peaks),1):
             save_et1a.write(str(alpha_pos)+'  '+str(xpos[FMetalon1A_peaks[zzz]])+'  '+str(FMetalon1A_peaks[zzz])+'  '+str(linecenter_ET1A[zzz])+'  '+str(linefwhm_ET1A[zzz])+'  '+str(lineskew_ET1A[zzz])+'\n')
-
+    
         # SALVA fits of FM - ETALON 1B
-        for zzz in range(0,np.size(FMetalon1B_peaks),1):
-            save_et1b.write(str(alpha_pos)+'  '+str(xpos[FMetalon1B_peaks[zzz]])+'  '+str(FMetalon1B_peaks[zzz])+'  '+str(linecenter_ET1B[zzz])+'  '+str(linefwhm_ET1B[zzz])+'  '+str(lineskew_ET1B[zzz])+'\n')
+        #--If trace contains NaNs (cosmic removal effect?) that affect the etalon fitting:
+        if (band == '1B') & (islice == 7) & (alpha_pos in alphas_inslice[1:3]): continue
+        elif (band == '1B') & (islice == 6) & (alpha_pos == alphas_inslice[1]): continue
+        elif (band == '1B') & (islice == 20) & (alpha_pos == alphas_inslice[11]): continue
+        elif (band == '1B') & (islice == 18) & (alpha_pos in alphas_inslice[6:8]): continue
+        else:
+            for zzz in range(0,np.size(FMetalon1B_peaks),1):
+                save_et1b.write(str(alpha_pos)+'  '+str(xpos[FMetalon1B_peaks[zzz]])+'  '+str(FMetalon1B_peaks[zzz])+'  '+str(linecenter_ET1B[zzz])+'  '+str(linefwhm_ET1B[zzz])+'  '+str(lineskew_ET1B[zzz])+'\n')
     
     elif band[0] in ['4']:
         #--FM data

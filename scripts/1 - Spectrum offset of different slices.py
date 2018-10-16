@@ -49,7 +49,7 @@ FilterTransmDir   = MRSWaveCalDir+"MrsFilterTransmissions/"
 
 # ### > Give analysis inputs
 
-# In[15]:
+# In[3]:
 
 # inputs
 band = '1B'                     # spectral band under investigation
@@ -60,7 +60,7 @@ ref_alpha = 0.                  # along-slice position, [arcsec]
 
 # ### > Import MRS observations
 
-# In[16]:
+# In[4]:
 
 usedfilter,source_img1,source_img2,mrs_transmission_img = funcs.mrs_filter_transmission(band,datapath=lvl2path)
 
@@ -90,7 +90,7 @@ plt.tight_layout()
 
 # ### > Determine spectrum offset between the central trace of each MRS IFU slice
 
-# In[17]:
+# In[5]:
 
 # load distortion maps
 d2cMaps   = d2cMapping(band,cdpDir)
@@ -101,7 +101,7 @@ nslices   = d2cMaps['nslices']
 det_dims  = (1024,1032)
 
 
-# In[18]:
+# In[6]:
 
 plt.close('all')
 # reference spectral trace
@@ -210,7 +210,7 @@ for islice in range(1,nslices+1):
     pix_offsets.append(round(pix_offset,2))
 
 
-# In[13]:
+# In[7]:
 
 # save output
 save_file = open('data/Band'+str(band)+'_{}_refslice'.format(usedfilter)+str(ref_slice)+'_alpha'+str(ref_alpha)+'_reloffsets.txt', 'w')
@@ -229,7 +229,7 @@ save_file.close()
 
 # ### Check consistency of reference point determination
 
-# In[14]:
+# In[8]:
 
 refpoint_file   = 'data/Band'+str(band)+'_{}_refslice'.format(usedfilter)+str(ref_slice)+'_alpha'+str(ref_alpha)+'_refpoint_'+user+'.txt'
 pixoffsets_file = 'data/Band'+str(band)+'_{}_refslice'.format(usedfilter)+str(ref_slice)+'_alpha'+str(ref_alpha)+'_reloffsets.txt'
@@ -243,7 +243,8 @@ for islice in range(1,nslices+1):
     ypos,xpos = funcs.detpixel_trace(band,d2cMaps,sliceID=islice,alpha_pos=ref_alpha)
     sci_fm_data = mrs_transmission_img[ypos,xpos]
     if band  == '1B': sci_fm_data[np.isnan(sci_fm_data)] = 0.8
-    if band in ['1B','2C']: sci_fm_data = savgol_filter(sci_fm_data,31,2)
+    elif band  == '2C': sci_fm_data[np.isnan(sci_fm_data)] = 0.9
+    if band in ['1B']: sci_fm_data = savgol_filter(sci_fm_data,31,2)
     
     plt.figure(figsize=(12,4))
     plt.title('Slice {} // Cut-off pixel: {}pix'.format(islice,round(cutoffpixel,2)),fontsize=20)

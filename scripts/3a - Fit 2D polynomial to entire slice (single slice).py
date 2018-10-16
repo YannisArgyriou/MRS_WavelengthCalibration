@@ -12,7 +12,7 @@
 # Does the 2D fit of each slice (individually)
 
 
-# In[15]:
+# In[1]:
 
 import funcs
 from distortionMaps import d2cMapping
@@ -27,7 +27,7 @@ from mpl_toolkits.mplot3d import Axes3D
 get_ipython().magic(u'matplotlib notebook')
 
 
-# In[19]:
+# In[28]:
 
 # directories
 
@@ -45,14 +45,14 @@ MRSWaveCalDir = workDir+"MRSWaveCal/"
 FTSlinefits   = MRSWaveCalDir+"FTS_ET_linefits/"
 
 # analysis inputs
-band = "4C"
+band = "1B"
 if band in ['1B','4B']:usedfilter = 'SWP'
 elif band in ['1C','2C']: usedfilter = 'LWP'
 elif band in ['2A','2B','4A','4C']: usedfilter = 'Dichroic'
-etal = "ET2B" # "ET1A", "ET1B", "ET2A", "ET2B"
+etal = "ET1B" # "ET1A", "ET1B", "ET2A", "ET2B"
 ref_alpha = 0.0
-ref_sli = 6
-islice = 7
+ref_sli = 10
+islice = 12
 
 # input files
 refpoint_file   = 'data/Band'+str(band)+'_{}_refslice'.format(usedfilter)+str(ref_sli)+'_alpha'+str(ref_alpha)+'_refpoint_'+user+'.txt'
@@ -61,7 +61,7 @@ pixoffsets_file = 'data/Band'+str(band)+'_{}_refslice'.format(usedfilter)+str(re
 alpha_tab       = datadir + 'Band'+str(band)+'_'+etal+'_slice'+str(islice)+'.txt'
 
 
-# In[20]:
+# In[29]:
 
 # Set of reference points
 yan_ref = np.loadtxt(refpoint_file,unpack=True,usecols=(0,1), skiprows = 5)
@@ -78,7 +78,7 @@ print "Reference Wav   = ", round(cutofflamb,3)
 print "Reference Ypix  =", round(cutoffpix,3)
 
 
-# In[21]:
+# In[30]:
 
 # Set of fitted etalon line parameters
 refsli_cen_y = np.loadtxt(fm_sol_file,unpack=True,usecols=(0,3), skiprows = 5)[1]
@@ -111,7 +111,7 @@ elif etal == "ET2B":
 offsets = np.loadtxt(pixoffsets_file,unpack=True,usecols=(0,1), skiprows = 5)[1]
 
 
-# In[22]:
+# In[31]:
 
 # load distortion maps
 d2cMaps   = d2cMapping(band,cdpDir)
@@ -122,7 +122,7 @@ nslices   = d2cMaps['nslices']
 det_dims  = (1024,1032)
 
 
-# In[23]:
+# In[32]:
 
 # compute slice reference x-position
 alpha_img = np.zeros(det_dims)
@@ -132,7 +132,7 @@ alphas = alpha_img[512,:][x_coords]
 x_s = interp1d(alphas,x_coords)(0.)
 
 
-# In[24]:
+# In[33]:
 
 # Translate the wav-pixel reference point to the new slice
 ref_new = ref_vals
@@ -146,7 +146,7 @@ w_val_ind = funcs.find_nearest(refsli_cen_wav,ref_new[0])
 w_val = refsli_cen_wav[w_val_ind]
 
 
-# In[25]:
+# In[34]:
 
 # Assigns the wavelengths for ref_alpha (ref_alpha = 0 usually) in the new slice
 wavelengths = np.empty_like(alpha_pos) * 0.
@@ -179,7 +179,7 @@ y_alpharef = linecenter_ETAL[:ggg]
 wav_alpharef = wavelengths[:ggg]
 
 
-# In[26]:
+# In[35]:
 
 # Assigns the wavelengths for ALL ALPHAS in the new slice
 for aaa in range(ggg,len(alpha_pos)):
@@ -214,7 +214,7 @@ elif etal == "ET2B":
 save_file.close()
 
 
-# In[27]:
+# In[36]:
 
 # Data for 2D polynomial fit:
 if etal == "ET1A": x = xpos_FMetalon1A_peaks
@@ -227,11 +227,15 @@ z = wavelengths
 # Fit 2d polynomial to data
 try:
     m = funcs.polyfit2d(x_s,x,y,z,2)
+    
+    if len(m) == 9:
+        # 2D polynomial fit of order 2
+        m = funcs.convert_m_order2_to_order4(m)
 except ValueError:
     raise ValueError, "FIT CRASHES FOR SLICE=" + str(islice)
 
 
-# In[28]:
+# In[37]:
 
 # Evaluate the 2D polynomial fit on a regular grid...
 nx, ny = 20, 20
@@ -265,7 +269,7 @@ ax.axis('tight')
 plt.show()
 
 
-# In[29]:
+# In[38]:
 
 # Saves the polynomial coefficients
 save_file_pol = open(datadir + 'Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(islice)+'_coeffs.txt', 'w')
@@ -284,6 +288,117 @@ print m
 print " SLICE_COMPLETE FINISHED <========================="
 # http://inversionlabs.com/2016/03/21/best-fit-surfaces-for-3-dimensional-data.html
 # https://stackoverflow.com/questions/7997152/python-3d-polynomial-surface-fit-order-dependent
+
+
+# ## Check WaveCal solution
+
+# In[14]:
+
+y_alpharef = {}
+wav_alpharef = {}
+for etal in ["ET1A","ET1B"]:
+    # input files
+    fm_sol_file     = 'data/Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(ref_sli)+'.txt'
+    alpha_tab       = datadir + 'Band'+str(band)+'_'+etal+'_slice'+str(islice)+'.txt'
+    
+    # Set of fitted etalon line parameters
+    refsli_cen_y = np.loadtxt(fm_sol_file,unpack=True,usecols=(0,3), skiprows = 5)[1]
+    refsli_cen_y = refsli_cen_y[:np.where(np.diff(refsli_cen_y)<0)[0][0]+1]
+
+    # FTS Etalon data (need to extrapolate to operating temperatures (~35 K)?)
+    FTS_ET1A_linefits_file = FTSlinefits+'RAL_FTS_ET1A_FITPARAMS_07.01.00.fits'
+    FTS_ET1B_linefits_file = FTSlinefits+'RAL_FTS_ET1B_FITPARAMS_07.01.00.fits'
+    FTS_ET2A_linefits_file = FTSlinefits+'RAL_FTS_ET2A_FITPARAMS_07.01.00.fits'
+    FTS_ET2B_linefits_file = FTSlinefits+'RAL_FTS_ET2B_FITPARAMS_07.01.00.fits'
+
+    ET1A_linecenters = fits.open(FTS_ET1A_linefits_file)[1].data['LAMCEN'] # [micron]
+    ET1B_linecenters = fits.open(FTS_ET1B_linefits_file)[1].data['LAMCEN'] # [micron]
+    ET2A_linecenters = fits.open(FTS_ET2A_linefits_file)[1].data['LAMCEN'] # [micron]
+    ET2B_linecenters = fits.open(FTS_ET2B_linefits_file)[1].data['LAMCEN'] # [micron]
+
+    if etal == "ET1A":
+        refsli_cen_wav = ET1A_linecenters
+        alpha_pos, xpos_FMetalon1A_peaks, FMetalon1A_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
+    elif etal == "ET1B":
+        refsli_cen_wav = ET1B_linecenters
+        alpha_pos, xpos_FMetalon1B_peaks, FMetalon1B_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
+    elif etal == "ET2A":
+        refsli_cen_wav = ET2A_linecenters
+        alpha_pos, xpos_FMetalon2A_peaks, FMetalon2A_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
+    elif etal == "ET2B":
+        refsli_cen_wav = ET2B_linecenters
+        alpha_pos, xpos_FMetalon2B_peaks, FMetalon2B_peaks, linecenter_ETAL, linefwhm_ETAL, lineskew_ETAL = np.loadtxt(alpha_tab,unpack=True,usecols=(0,1,2,3,4,5), skiprows = 5)
+
+    offsets = np.loadtxt(pixoffsets_file,unpack=True,usecols=(0,1), skiprows = 5)[1]
+
+    # Set of reference points
+    yan_ref = np.loadtxt(refpoint_file,unpack=True,usecols=(0,1), skiprows = 5)
+    if (ref_alpha == 0.0) & (ref_sli == 10):
+        alo_ref = np.array([6.62690523,143.6117457 ])
+
+    ref_vals = yan_ref
+    cutofflamb = ref_vals[0]
+    cutoffpix = ref_vals[1]
+
+    # Translate the wav-pixel reference point to the new slice
+    ref_new = ref_vals
+    ref_new[1] = ref_new[1] + offsets[islice-1]
+
+    # Search for the nearest y and wavelength to the reference point for ref_alpha (ref_alpha = 0 usually) in the new slice
+    y_val_ind = funcs.find_nearest(linecenter_ETAL[np.where(alpha_pos == float(ref_alpha))],ref_new[1])
+    y_val = linecenter_ETAL[y_val_ind]
+
+    w_val_ind = funcs.find_nearest(refsli_cen_wav,ref_new[0])
+    w_val = refsli_cen_wav[w_val_ind]
+
+    # Assigns the wavelengths for ref_alpha (ref_alpha = 0 usually) in the new slice
+    wavelengths = np.empty_like(alpha_pos) * 0.
+    if y_val > ref_new[1] and w_val < ref_new[0]:
+        w_val_ind = w_val_ind + 1
+        w_val = refsli_cen_wav[w_val_ind]
+    if y_val < ref_new[1] and w_val > ref_new[0]:
+        w_val_ind = w_val_ind - 1
+        w_val = refsli_cen_wav[w_val_ind]
+
+    for ylow in range(y_val_ind,-1,-1):
+        if band[0] in ['1','2']:
+            wavelengths[ylow] = refsli_cen_wav[w_val_ind-(y_val_ind-ylow)]
+        elif band[0] in ['3','4']:
+            wavelengths[ylow] = refsli_cen_wav[w_val_ind+(y_val_ind-ylow)]
+
+    ggg = y_val_ind + 1
+    while alpha_pos[ggg] == alpha_pos[ggg-1]:
+        if band[0] in ['1','2']:
+            wavelengths[ggg] = refsli_cen_wav[w_val_ind+ggg-y_val_ind]
+        elif band[0] in ['3','4']:
+            wavelengths[ggg] = refsli_cen_wav[w_val_ind-(ggg-y_val_ind)]
+        ggg = ggg + 1
+    
+    # Creates arrays for the y and wavel of the ref_alpha (ref_alpha = 0 usually) in the new slice
+    y_alpharef[etal] = linecenter_ETAL[:ggg]
+    wav_alpharef[etal] = wavelengths[:ggg]
+
+
+# In[15]:
+
+plt.figure(figsize=(12,6))
+plt.plot(cutoffpix,cutofflamb,'go',label='Reference wavelength (/pixel)')
+
+plt.plot(y_alpharef['ET1A'],wav_alpharef['ET1A'],'k')
+plt.plot(y_alpharef['ET1A'],wav_alpharef['ET1A'],'ro',label='ET_1A FTS & FM matching')
+plt.plot(y_alpharef['ET1B'],wav_alpharef['ET1B'],'k')
+plt.plot(y_alpharef['ET1B'],wav_alpharef['ET1B'],'bo',label='ET_1B FTS & FM matching')
+
+plt.hlines(cutofflamb,y_alpharef['ET1A'][0],y_alpharef['ET1A'][-1],linestyle='dashed')
+plt.vlines(cutoffpix,wav_alpharef['ET1A'].min(),wav_alpharef['ET1A'].max(),linestyle='dashed')
+
+plt.xlim(y_alpharef['ET1A'][0],y_alpharef['ET1A'][-1])
+plt.ylim(wav_alpharef['ET1B'].min(),wav_alpharef['ET1B'].max())
+plt.xlabel('Y coordinate [pix]',fontsize=20)
+plt.ylabel('Wavelength [micron]',fontsize=20)
+plt.tick_params(axis='both',labelsize=20)
+plt.legend(loc='upper left',fontsize=14)
+plt.tight_layout()
 
 
 # In[ ]:

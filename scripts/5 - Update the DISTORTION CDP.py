@@ -42,15 +42,15 @@ old_distortion_cdp = fits.open(outDir+'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.f
 # change headers
 old_distortion_cdp[0].header['DATE']     = datetime.datetime.utcnow().isoformat()
 old_distortion_cdp[0].header['FILENAME'] = 'MIRI_FM_MIR{}_DISTORTION_7B.06.00.fits'.format(miri_setup)
-old_distortion_cdp[0].header['VERSION']  = '7B.XX.XX'
+old_distortion_cdp[0].header['VERSION']  = '7B.06.00'
 old_distortion_cdp[0].header['ORIGFILE'] = 'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.format(miri_setup)
-old_distortion_cdp[0].header.add_history("- updated wavelength extension Channel 1C -> DOCUMENT:")
+old_distortion_cdp[0].header.add_history("- updated wavelength extension Channel 1B,1C,2A,2B,2C -> DOCUMENT:")
 old_distortion_cdp[0].header.add_history("- MIRI-TN-00004-ETH, Alvaro Labiano and Ioannis Argyriou")
 
 # update the wavelength solution
 for band in ['2A']:
     if band == '1A': etal='ET1A'
-    elif band == '2A': etal='ET1B'
+    elif band == '2A': etal='ET1A'
     
     # number of slices in band
     d2cMaps  = d2cMapping(band,cdpDir)
@@ -99,7 +99,7 @@ for band in ['2A']:
 
 # # Band 1B/2B
 
-# In[5]:
+# In[7]:
 
 miri_setup = 'IFUSHORT_12MEDIUM'
 # load old distortion cdp fits file
@@ -108,9 +108,9 @@ old_distortion_cdp = fits.open(outDir+'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.f
 # change headers
 old_distortion_cdp[0].header['DATE']     = datetime.datetime.utcnow().isoformat()
 old_distortion_cdp[0].header['FILENAME'] = 'MIRI_FM_MIR{}_DISTORTION_7B.06.00.fits'.format(miri_setup)
-old_distortion_cdp[0].header['VERSION']  = '7B.XX.XX'
+old_distortion_cdp[0].header['VERSION']  = '7B.06.00'
 old_distortion_cdp[0].header['ORIGFILE'] = 'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.format(miri_setup)
-old_distortion_cdp[0].header.add_history("- updated wavelength extension Channel 1C -> DOCUMENT:")
+old_distortion_cdp[0].header.add_history("- updated wavelength extension Channel 1B,1C,2A,2B,2C -> DOCUMENT:")
 old_distortion_cdp[0].header.add_history("- MIRI-TN-00004-ETH, Alvaro Labiano and Ioannis Argyriou")
 
 # update the wavelength solution
@@ -173,9 +173,9 @@ old_distortion_cdp = fits.open(outDir+'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.f
 # change headers
 old_distortion_cdp[0].header['DATE']     = datetime.datetime.utcnow().isoformat()
 old_distortion_cdp[0].header['FILENAME'] = 'MIRI_FM_MIR{}_DISTORTION_7B.06.00.fits'.format(miri_setup)
-old_distortion_cdp[0].header['VERSION']  = '7B.XX.XX'
+old_distortion_cdp[0].header['VERSION']  = '7B.06.00'
 old_distortion_cdp[0].header['ORIGFILE'] = 'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.format(miri_setup)
-old_distortion_cdp[0].header.add_history("- updated wavelength extension Channel 1C -> DOCUMENT:")
+old_distortion_cdp[0].header.add_history("- updated wavelength extension Channel 1B,1C,2A,2B,2C -> DOCUMENT:")
 old_distortion_cdp[0].header.add_history("- MIRI-TN-00004-ETH, Alvaro Labiano and Ioannis Argyriou")
 
 # update the wavelength solution

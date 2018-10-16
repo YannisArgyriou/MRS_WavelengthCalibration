@@ -47,9 +47,9 @@ FilterTransmDir   = MRSWaveCalDir+"MrsFilterTransmissions/"
 # In[3]:
 
 # inputs
-band = '4C'                     # spectral band under investigation
+band = '2B'                     # spectral band under investigation
 lamblower,lambupper = funcs.mrs_aux(band)[3] # nominal wavelength range of mrs band
-islice    = 6                  # slice number (equivalent to beta position)
+islice    = 10                  # slice number (equivalent to beta position)
 alpha_pos = 0.                  # along-slice position, [arcsec]
 
 

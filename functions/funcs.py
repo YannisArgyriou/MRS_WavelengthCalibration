@@ -1093,20 +1093,20 @@ def polyval2d(x_s, x, y, m):
     ij = itertools.product(range(order+1), range(order+1))
     z = np.zeros_like(x)
     for a, (i,j) in zip(m, ij):
-        z += a * (x-x_s)**j * y**i
+        z = z + a * (x-x_s)**j * y**i
     return z
 
 
 # etalon lines
 def etalon_line_params(band):
     if band == "1B":
-        alpha_high = 1.45
+        alpha_high = 1.4
         alpha_low = -1.5
         thres_e1a=0.3
         min_dist_e1a=5
         sigma0_e1a = 1.5
         thres_e1b=0.2
-        min_dist_e1b=5
+        min_dist_e1b=6
         sigma0_e1b = 10.
     elif band == '1C':
         alpha_high = 1.45
@@ -1119,7 +1119,7 @@ def etalon_line_params(band):
         sigma0_e1b=1.7
     elif band == '2A':
         alpha_high = 2.2
-        alpha_low = -1.9
+        alpha_low = -1.5
         thres_e1a=0.3
         min_dist_e1a=9
         sigma0_e1a=1.8
@@ -1128,7 +1128,7 @@ def etalon_line_params(band):
         sigma0_e1b=1.8
     elif band == '2B':
         alpha_high = 2.2
-        alpha_low = -1.9
+        alpha_low = -1.5
         thres_e1a=0.3
         min_dist_e1a=9
         sigma0_e1a=4.
@@ -1137,7 +1137,7 @@ def etalon_line_params(band):
         sigma0_e1b=1.9
     elif band == "2C":
         alpha_high = 2.2
-        alpha_low = -1.9
+        alpha_low = -1.5
         thres_e1a=0.2
         min_dist_e1a=12
         sigma0_e1a=15.
@@ -2663,7 +2663,7 @@ def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=Fal
     lamblower,lambupper = mrs_aux(band)[3]
     if band == '1B': usedfilter = 'SWP'
     elif band == '1C': usedfilter = 'LWP'
-    elif band == '4C': usedfilter = 'Dichroic'
+    elif band in ['2A','2B','4C']: usedfilter = 'Dichroic'
 
     if band in ['1B','1C','4C']:
         """
@@ -2727,19 +2727,25 @@ def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=Fal
             axs[0].set_xlabel('Wavelength [micron]',fontsize=12)
             axs[0].set_ylabel('Transmission',fontsize=12)
             axs[0].set_title('{} filter transmission (lab data)'.format(usedfilter),fontsize=12)
-            axs[1].plot(sci_fm_data[np.nonzero(sci_fm_data)])
-            axs[1].plot(savgol_filter(sci_fm_data[np.nonzero(sci_fm_data)],21,3),'r')
+            axs[1].plot(sci_fm_data[np.nonzero(sci_fm_data)],label='original data')
+            if band == '1B':
+                axs[1].plot(savgol_filter(sci_fm_data[np.nonzero(sci_fm_data)],21,3),'r',label='smoothed data')
+                axs[1].legend(loc='lower left',fontsize=12)
             axs[1].set_xlim(-40,1064)
-            axs[1].set_xlabel('Y-coordinate [pix]',fontsize=20)
+            axs[1].set_xlabel('Y-pixel',fontsize=12)
             axs[1].set_title('{} filter transmission (MRS data)'.format(usedfilter),fontsize=12)
             for plot in range(2): axs[plot].tick_params(axis='both',labelsize=12)
             plt.tight_layout()
 
             fig,axs = plt.subplots(2,1,figsize=(12,8))
+            plt.suptitle('Cut-off wavelength {}micron located at pixel {}'.format(round(cutofflamb,2),round(cutoffpix,2) ),fontsize=12)
+            if band == '1B': lower0,upper0 = -0.001,0.0022; lower1,upper1 = -0.004,0.008;
+            elif band == '1C': lower0,upper0 =  -0.001,0.004; lower1,upper1 = -0.004,0.008
             axs[0].plot(filter_wave,np.gradient(filter_transm,filter_wave),'b')
             axs[0].hlines(0,lamblower,lambupper)
-            axs[0].vlines(cutofflamb,-0.001,0.004,linestyle='dashed',label='reference point')
+            axs[0].vlines(cutofflamb,lower0,upper0,linestyle='dashed',label='reference point')
             axs[0].set_xlim(lamblower,lambupper)
+            axs[0].set_ylim(lower0,upper0)
             if band == '1B':
                 axs[1].plot(np.gradient(savgol_filter(sci_fm_data[np.nonzero(sci_fm_data)],21,3)),'r')
             elif band == '4C':
@@ -2747,16 +2753,17 @@ def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=Fal
             else:
                 axs[1].plot(np.gradient(sci_fm_data[np.nonzero(sci_fm_data)]),'r')
             axs[1].hlines(0,0,1024)
-            axs[1].vlines(cutoffpix,-0.004,0.008,linestyle='dashed',label='reference point')
+            axs[1].vlines(cutoffpix,lower1,upper1,linestyle='dashed',label='reference point')
             axs[1].set_xlim(0,1023)
+            axs[1].set_ylim(lower1,upper1)
             axs[0].set_xlabel('Wavelength [micron]',fontsize=12)
             axs[0].set_ylabel('INTA {} transm gradient'.format(usedfilter),fontsize=12)
-            axs[1].set_xlabel('Y-coordinate [pix]',fontsize=12)
+            axs[1].set_xlabel('Y-pixel',fontsize=12)
             axs[1].set_ylabel('RAL {} transm gradient'.format(usedfilter),fontsize=12)
             for plot in range(2):
                 axs[plot].tick_params(axis='both',labelsize=12)
                 axs[plot].legend(loc='upper right',fontsize=12)
-            plt.tight_layout()
+            plt.tight_layout(rect=[0, 0.03, 1, 0.98])
 
         if band == '1C':
             print 'The result is senstive to spl.set_smoothing_factor'
@@ -2777,50 +2784,149 @@ def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=Fal
         cutoffpix = (cutofflamb-popt[1])/popt[0]
 
         if plot:
-            plt.figure(figsize=(10,8))
+            fig,axs = plt.subplots(1,2,figsize=(12,4))
+            axs[0].plot(filter_wave,filter_transm)
+            axs[0].set_xlim(lamblower,lambupper)
+            axs[0].set_xlabel('Wavelength [micron]',fontsize=12)
+            axs[0].set_ylabel('Transmission',fontsize=12)
+            axs[0].set_title('{} filter transmission (lab data)'.format(usedfilter),fontsize=12)
+            axs[1].plot(sci_fm_data[np.nonzero(sci_fm_data)],label='original data')
+            axs[1].set_xlim(-40,1064)
+            axs[1].set_xlabel('Y-pixel',fontsize=12)
+            axs[1].set_title('{} filter transmission (MRS data)'.format(usedfilter),fontsize=12)
+            for plot in range(2): axs[plot].tick_params(axis='both',labelsize=12)
+            plt.tight_layout()
+
+            plt.figure(figsize=(8,6))
             plt.plot(np.arange(1024),matched_wavls,label='wavelength-pixel transmission relation')
             plt.plot(straight_line(np.arange(1024),*popt),label='fit')
             plt.plot(cutoffpix,cutofflamb,'ro',label='reference wavelength-pixel pair')
-            plt.vlines(cutoffpix,7.4,8.8)
-            plt.hlines(cutofflamb,-40,1064)
-            plt.xlim(-40,1064)
-            plt.ylim(7.4,8.8)
-            plt.xlabel('Y coordinate [pix]',fontsize=20)
-            plt.ylabel('Wavelength [micron]',fontsize=20)
-            plt.suptitle('Cut-off wavelength {}micron located at pix {}'.format(cutofflamb,round(cutoffpix,2) ),fontsize=20)
+            plt.vlines(cutoffpix,7.4,8.4)
+            plt.hlines(cutofflamb,-40,600)
+            plt.xlim(-40,600)
+            plt.ylim(7.4,8.4)
+            plt.xlabel('Y coordinate [pix]',fontsize=12)
+            plt.ylabel('Wavelength [micron]',fontsize=12)
+            plt.suptitle('Cut-off wavelength {}micron located at pixel {}'.format(cutofflamb,round(cutoffpix,2) ),fontsize=12)
             plt.legend(loc='lower right')
-            plt.tick_params(axis='both',labelsize=20)
-            plt.tight_layout(rect=[0, 0.03, 1, 0.96])
+            plt.tick_params(axis='both',labelsize=12)
+            plt.tight_layout(rect=[0, 0.03, 1, 0.98])
 
     elif band == '2B':
-        # define cut-off wavelength
-        cutofflamb = 8.74
+        # # define cut-off wavelength
+        # cutofflamb = 8.74
+        # # load spectrum from desired location and carry-out analysis
+        # sci_fm_data = mrs_transmission
+        # # Relate transmission values in wavelength space and in pixel space
+        # matched_wavls = np.full(len(sci_fm_data),np.nan)
+        #
+        # for i in range(len(sci_fm_data)):
+        #     matched_wavls[i] = filter_wave[np.abs(filter_transm-sci_fm_data[i]).argmin()]
+        #
+        # popt = np.polyfit(np.arange(len(sci_fm_data))[:80],matched_wavls[:80],1)
+        # fit = np.poly1d(popt)
+        # cutoffpix = (cutofflamb-popt[1])/popt[0]
+        # if plot:
+        #     fig,axs = plt.subplots(1,2,figsize=(12,4))
+        #     axs[0].plot(filter_wave,filter_transm)
+        #     axs[0].set_xlim(lamblower,lambupper)
+        #     axs[0].set_xlabel('Wavelength [micron]',fontsize=12)
+        #     axs[0].set_ylabel('Transmission',fontsize=12)
+        #     axs[0].set_title('{} filter transmission (lab data)'.format(usedfilter),fontsize=12)
+        #     axs[1].plot(sci_fm_data[np.nonzero(sci_fm_data)],label='original data')
+        #     axs[1].set_xlim(-40,1064)
+        #     axs[1].set_xlabel('Y-pixel',fontsize=12)
+        #     axs[1].set_title('{} filter transmission (MRS data)'.format(usedfilter),fontsize=12)
+        #     for plot in range(2): axs[plot].tick_params(axis='both',labelsize=12)
+        #     plt.tight_layout()
+        #
+        #     plt.figure(figsize=(8,6))
+        #     plt.plot(np.arange(1024),matched_wavls,label='wavelength-pixel transmission relation')
+        #     plt.plot(fit(np.arange(1024)),label='fit')
+        #     plt.plot(cutoffpix,cutofflamb,'ro',label='reference wavelength-pixel pair')
+        #     plt.vlines(cutoffpix,lamblower,lambupper)
+        #     plt.hlines(cutofflamb,-10,90)
+        #     plt.xlim(-10,90)
+        #     plt.ylim(lamblower,8.81)
+        #     plt.xlabel('Y-pixel',fontsize=12)
+        #     plt.ylabel('Wavelength [micron]',fontsize=12)
+        #     plt.suptitle('Cut-off wavelength {}micron located at pixel {}'.format(cutofflamb,round(cutoffpix,2) ),fontsize=12)
+        #     plt.legend(loc='lower right')
+        #     plt.tick_params(axis='both',labelsize=12)
+        #     plt.tight_layout(rect=[0, 0.03, 1, 0.98])
+
         # load spectrum from desired location and carry-out analysis
         sci_fm_data = mrs_transmission
-        # Relate transmission values in wavelength space and in pixel space
-        matched_wavls = np.full(len(sci_fm_data),np.nan)
 
-        for i in range(len(sci_fm_data)):
-            matched_wavls[i] = filter_wave[np.abs(filter_transm-sci_fm_data[i]).argmin()]
+        # post-processing
+        sci_fm_data[np.isnan(sci_fm_data)] = 0
+        if band == '1C':
+            # fit spline to data (smoother signal profile)
+            spl = scp_interpolate.UnivariateSpline(np.arange(len(sci_fm_data[1:-1]) ),sci_fm_data[1:-1])
+            spl.set_smoothing_factor(0.02)
+            sci_fm_data = spl(np.arange(len(sci_fm_data)))
 
-        popt = np.polyfit(np.arange(len(sci_fm_data))[:80],matched_wavls[:80],1)
-        fit = np.poly1d(popt)
-        cutoffpix = (cutofflamb-popt[1])/popt[0]
+        # compute gradients and slopes
+        filter_grad = np.gradient(filter_transm,filter_wave)
+        filter_signs = np.sign(filter_grad)
+
+        sci_fm_data_grad = np.gradient(savgol_filter(sci_fm_data[np.nonzero(sci_fm_data)],51,3))
+        sci_fm_data_signs = np.sign(sci_fm_data_grad)
+
+        filter_zerocrossing = np.where(np.abs(np.diff(filter_signs)) == 2)[0]
+        sci_fm_data_zerocrossing = np.where(np.abs(np.diff(sci_fm_data_signs)) == 2)[0]
+
+        x0 = filter_wave[filter_zerocrossing[0]]
+        x1 = filter_wave[filter_zerocrossing[0]+1]
+        y0 = filter_grad[filter_zerocrossing[0]]
+        y1 = filter_grad[filter_zerocrossing[0]+1]
+        a = (y1-y0)/(x1-x0)
+        cutofflamb = (-y0/a) + x0
+
+        x0 = sci_fm_data_zerocrossing[0]
+        x1 = np.arange(len(sci_fm_data))[sci_fm_data_zerocrossing[0]+1]
+        y0 = sci_fm_data_grad[sci_fm_data_zerocrossing[0]]
+        y1 = sci_fm_data_grad[sci_fm_data_zerocrossing[0]+1]
+        a = (y1-y0)/(x1-x0)
+        cutoffpix = (-y0/a) + x0
+
         if plot:
-            plt.figure(figsize=(10,8))
-            plt.plot(np.arange(1024),matched_wavls,label='wavelength-pixel transmission relation')
-            plt.plot(fit(np.arange(1024)),label='fit')
-            plt.plot(cutoffpix,cutofflamb,'ro',label='reference wavelength-pixel pair')
-            plt.vlines(cutoffpix,lamblower,lambupper)
-            plt.hlines(cutofflamb,-40,1064)
-            plt.xlim(-40,1064)
-            plt.ylim(lamblower,lambupper)
-            plt.xlabel('Y coordinate [pix]',fontsize=20)
-            plt.ylabel('Wavelength [micron]',fontsize=20)
-            plt.suptitle('Cut-off wavelength {}micron located at pix {}'.format(cutofflamb,round(cutoffpix,2) ),fontsize=20)
-            plt.legend(loc='lower right')
-            plt.tick_params(axis='both',labelsize=20)
-            plt.tight_layout(rect=[0, 0.03, 1, 0.96])
+            fig,axs = plt.subplots(1,2,figsize=(12,4))
+            axs[0].plot(filter_wave,filter_transm)
+            axs[0].set_xlim(lamblower,lambupper)
+            axs[0].set_xlabel('Wavelength [micron]',fontsize=12)
+            axs[0].set_ylabel('Transmission',fontsize=12)
+            axs[0].set_title('{} filter transmission (lab data)'.format(usedfilter),fontsize=12)
+            axs[1].plot(sci_fm_data[np.nonzero(sci_fm_data)],label='original data')
+            axs[1].plot(savgol_filter(sci_fm_data[np.nonzero(sci_fm_data)],51,3),'r',label='smoothed data')
+            axs[1].legend(loc='lower right',fontsize=12)
+            axs[1].set_xlim(-40,1064)
+            axs[1].set_xlabel('Y-pixel',fontsize=12)
+            axs[1].set_title('{} filter transmission (MRS data)'.format(usedfilter),fontsize=12)
+            for plot in range(2): axs[plot].tick_params(axis='both',labelsize=12)
+            plt.tight_layout()
+
+            fig,axs = plt.subplots(2,1,figsize=(12,8))
+            plt.suptitle('Cut-off wavelength {}micron located at pixel {}'.format(round(cutofflamb,2),round(cutoffpix,2) ),fontsize=12)
+            lower0,upper0 = -0.001,0.007; lower1,upper1 = -0.004,0.013;
+            axs[0].plot(filter_wave,np.gradient(filter_transm,filter_wave),'b')
+            axs[0].hlines(0,lamblower,lambupper)
+            axs[0].vlines(cutofflamb,lower0,upper0,linestyle='dashed',label='reference point')
+            axs[0].set_xlim(lamblower,lambupper)
+            axs[0].set_ylim(lower0,upper0)
+            axs[1].plot(sci_fm_data_grad,'r')
+            axs[1].hlines(0,0,1024)
+            axs[1].vlines(cutoffpix,lower1,upper1,linestyle='dashed',label='reference point')
+            axs[1].set_xlim(0,1023)
+            axs[1].set_ylim(lower1,upper1)
+            axs[0].set_xlabel('Wavelength [micron]',fontsize=12)
+            axs[0].set_ylabel('INTA {} transm gradient'.format(usedfilter),fontsize=12)
+            axs[1].set_xlabel('Y-pixel',fontsize=12)
+            axs[1].set_ylabel('FM {} transm gradient'.format(usedfilter),fontsize=12)
+            for plot in range(2):
+                axs[plot].tick_params(axis='both',labelsize=12)
+                axs[plot].legend(loc='upper right',fontsize=12)
+            plt.tight_layout(rect=[0, 0.03, 1, 0.98])
 
     elif band == '2C':
         # load spectrum from desired location and carry-out analysis
@@ -2854,32 +2960,34 @@ def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=Fal
             axs[0].set_xlabel('Wavelength [micron]',fontsize=12)
             axs[0].set_ylabel('Transmission',fontsize=12)
             axs[0].set_title('LWP filter transmission (lab data)',fontsize=12)
-            axs[1].plot(sci_fm_data[np.nonzero(sci_fm_data)])
-            axs[1].plot(spl(np.arange(len(sci_fm_data))),'r')
+            axs[1].plot(mrs_transmission,label='original data')
+            axs[1].plot(spl(np.arange(len(sci_fm_data))),'r',label='smoothed data')
+            axs[1].legend(loc='lower right',fontsize=12)
             axs[1].set_xlim(-40,1064)
-            axs[1].set_xlabel('Y-coordinate [pix]',fontsize=12)
+            axs[1].set_xlabel('Y-pixel',fontsize=12)
             axs[1].set_title('LWP filter transmission (MRS data)',fontsize=12)
             for plot in range(2): axs[plot].tick_params(axis='both',labelsize=12)
             plt.tight_layout()
 
             fig,axs = plt.subplots(2,1,figsize=(12,8))
+            plt.suptitle('Cut-off wavelength {}micron located at pixel {}'.format(round(cutofflamb,2),round(cutoffpix,2) ),fontsize=12)
             axs[0].plot(filter_wave,np.gradient(filter_transm,filter_wave),'b')
             axs[0].hlines(0,lamblower,lambupper)
             axs[0].vlines(cutofflamb,-0.0002,0.0002,linestyle='dashed',label='reference point')
             axs[0].set_xlim(lamblower,lambupper)
             axs[1].plot(np.gradient(spl(np.arange(1024))),'r')
-            axs[1].hlines(0,0,1024)
+            axs[1].hlines(0,633,1024)
             axs[1].vlines(cutoffpix,-0.001,0.001,linestyle='dashed',label='reference point')
-            axs[1].set_xlim(0,1023)
+            axs[1].set_xlim(633,1023)
             axs[1].set_ylim(-0.001,0.001)
             axs[0].set_xlabel('Wavelength [micron]',fontsize=12)
             axs[0].set_ylabel('INTA LWP transm gradient',fontsize=12)
-            axs[1].set_xlabel('Y-coordinate [pix]',fontsize=12)
+            axs[1].set_xlabel('Y-pixel',fontsize=12)
             axs[1].set_ylabel('FM LWP transm gradient',fontsize=12)
             for plot in range(2):
                 axs[plot].tick_params(axis='both',labelsize=12)
                 axs[plot].legend(loc='upper right',fontsize=12)
-            plt.tight_layout()
+            plt.tight_layout(rect=[0, 0.03, 1, 0.98])
 
     elif band == '4A':
         # load spectrum from desired location and carry-out analysis
@@ -2991,3 +3099,67 @@ def get_reference_point(band,filter_wave,filter_transm,mrs_transmission,plot=Fal
 
 
     return cutofflamb,cutoffpix
+
+#--slice offset
+def slice_pix_offset(band,ref_source_img,second_source_img,pos_of_ref='right',plot=False):
+    from scipy.interpolate import interp1d
+    # select range of pixels
+    if band[0] in ['1','4']: lower,upper = 10,502
+    elif band[0] in ['2','3']: lower,upper = 522,1010
+
+    pix_offsets = []
+    rows = np.arange(50,1000,50)
+    for row in np.arange(50,1000,50):
+        sci_fm_data_ref = ref_source_img[row,:][lower:upper]
+
+        # create a finer grid
+        step = 0.02
+        fine_grid = np.arange(lower,upper-1+step,step)
+        sci_fm_data_ref_fine = interp1d(lower+np.arange(len(sci_fm_data_ref)),sci_fm_data_ref)(fine_grid)
+
+        offsets = np.arange(1,100)
+        wider_offsets = np.arange(-40,100)
+
+        sci_fm_data = second_source_img[row,:][lower:upper]
+        sci_fm_data_fine = interp1d(lower+np.arange(len(sci_fm_data)),sci_fm_data)(fine_grid)
+
+        # polynomial fit order
+        residuals = []
+        for offset in offsets:
+            if pos_of_ref=='right':
+                residuals.append(np.sum(((sci_fm_data_ref_fine[offset:]-sci_fm_data_fine[:-offset])[~np.isnan(sci_fm_data_ref_fine[offset:]-sci_fm_data_fine[:-offset])])[:-100]**2))
+            elif pos_of_ref=='left':
+                residuals.append(np.sum(((sci_fm_data_fine[offset:]-sci_fm_data_ref_fine[:-offset])[~np.isnan(sci_fm_data_fine[offset:]-sci_fm_data_ref_fine[:-offset])])[:-100]**2))
+        residuals = np.array(residuals)
+
+        popt     = np.polyfit(offsets,residuals,4)
+        poly     = np.poly1d(popt)
+
+        pix_offset = wider_offsets[np.argmin(poly(wider_offsets))]*step
+        pix_offsets.append(pix_offset)
+
+        if plot:
+            if row == 500.:
+                plt.figure(figsize=(12,4))
+                plt.title('Row {}'.format(row))
+                plt.plot(sci_fm_data_ref_fine,label='FM data')
+                plt.plot(sci_fm_data_fine,label='CV3 data')
+                plt.legend(loc='lower right')
+                plt.tight_layout()
+
+                plt.figure(figsize=(12,4))
+                plt.title('Row {}'.format(row))
+                plt.plot(offsets*step,residuals,'bo')
+                plt.plot(wider_offsets*step,poly(wider_offsets),'r')
+                plt.xlabel('Slice pixel offset [pix]')
+                plt.ylabel(r'residuals^2')
+                plt.tight_layout()
+    if plot:
+        plt.figure(figsize=(12,4))
+        plt.plot(np.arange(50,1000,50),pix_offsets,'bo')
+        plt.xlabel('Detector row')
+        plt.ylabel('Slice pixel offset [pix]')
+        plt.tight_layout()
+
+    pix_offsets = np.array(pix_offsets)
+    return rows,pix_offsets

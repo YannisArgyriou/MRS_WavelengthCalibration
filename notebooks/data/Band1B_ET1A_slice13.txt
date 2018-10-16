@@ -1,5 +1,5 @@
 # Band 1B   Etalon 1A   Slice 13
-# Distortion map version 06.04.00 - date 2018-10-10
+# Distortion map version 06.04.00 - date 2018-10-16
 # Trace (isoalpha): Take pixel trace along specified slice, specified alpha position trace is built by taking the pixel in every detector row with alpha value closest to the one specified 
 # xpos[i] = np.argmin(alpha_img[i,:])+funcs.find_nearest(alpha_img[i,:][(slice_img[i,:]!=0)],alpha_pos)
 #    alpha       x  y      center         FWHM          skewness
@@ -91,7 +91,6 @@
 0.0  420  979  978.511973297  1.74298067637  0.0415153880812
 0.0  420  994  993.725731052  1.78454095614  0.0193930627468
 0.0  419  1009  1009.03856278  1.85955745447  -0.0128958946063
--1.47261805113  411  4  4.49777248407  1.15246723158  0.0393509096972
 -1.47261805113  411  13  13.226178449  1.39115929276  0.118084968308
 -1.47261805113  411  22  21.9066660184  1.4134261819  0.0474381177918
 -1.47261805113  412  31  30.8253136739  1.37636162544  0.0340902894442
