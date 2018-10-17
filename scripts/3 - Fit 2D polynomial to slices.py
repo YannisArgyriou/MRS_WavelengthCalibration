@@ -36,12 +36,12 @@ MRSWaveCalDir = workDir+"MRSWaveCal/"
 FTSlinefits   = MRSWaveCalDir+"FTS_ET_linefits/"
 
 # analysis inputs
-band = '2B'
+band = '1C'
 if band in ['1B','4B']:usedfilter = 'SWP'
 elif band in ['1C','2C']: usedfilter = 'LWP'
 elif band in ['2A','2B','4A','4C']: usedfilter = 'Dichroic'
 
-etal = "ET1B" # "ET1A", "ET1B", "ET2A", "ET2B"
+etal = "ET1A" # "ET1A", "ET1B", "ET2A", "ET2B"
 ref_alpha = 0.0
 if band[0] in ['1','2']: ref_sli = 10
 elif band[0] in ['4']: ref_sli = 6
@@ -148,7 +148,7 @@ for islice in range(1,nslices+1):
 print 'Dominant case is case {}, with an occurence rate {} out of {} slices'.format(np.argmax(counters)+1,counters,nslices)
 
 
-# In[19]:
+# In[8]:
 
 plot = True
 for islice in [10]:# range(1,nslices+1):
