@@ -9,4 +9,5 @@ List of notebooks per spectral band:
 3a - Fit 2D polynomial to entire slice (single slice)  
 3b - Fit 2D polynomial to entire slice (all slices)  
 4 - Evaluate new polynomial solution  
+5 - Update the DISTORTION CDP  
 
