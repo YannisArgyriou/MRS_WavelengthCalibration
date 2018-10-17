@@ -227,6 +227,210 @@ for band in ['1C','2C']:
     old_distortion_cdp.writeto(outDir + "MIRI_FM_MIR{}_DISTORTION_7B.06.00.fits".format(miri_setup),overwrite=True)
 
 
+# # Band 3A/4A
+
+# In[8]:
+
+wavecal_available = False
+miri_setup = 'IFULONG_34SHORT'
+# load old distortion cdp fits file
+old_distortion_cdp = fits.open(outDir+'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.format(miri_setup))
+
+# change headers
+old_distortion_cdp[0].header['DATE']     = datetime.datetime.utcnow().isoformat()
+old_distortion_cdp[0].header['FILENAME'] = 'MIRI_FM_MIR{}_DISTORTION_7B.06.00.fits'.format(miri_setup)
+old_distortion_cdp[0].header['VERSION']  = '7B.06.00'
+old_distortion_cdp[0].header['ORIGFILE'] = 'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.format(miri_setup)
+old_distortion_cdp[0].header.add_history("- updated wavelength extension Channel 1B,1C,2A,2B,2C -> DOCUMENT:")
+old_distortion_cdp[0].header.add_history("- MIRI-TN-00004-ETH, Alvaro Labiano and Ioannis Argyriou")
+
+# update the wavelength solution
+for band in ['3A','4A']:
+    if band == '3A': etal='ET2A'
+    elif band == '4A': etal='ET2B'
+    
+    if wavecal_available:
+        # number of slices in band
+        d2cMaps  = d2cMapping(band,cdpDir)
+        sliceMap = d2cMaps['sliceMap']
+        alphaMap = d2cMaps['alphaMap']
+        nslices  = d2cMaps['nslices']
+        det_dims  = (1024,1032)
+
+        # Create arrays of variables
+        VAR1 = np.zeros(nslices)
+        for islice in range(1,nslices+1):
+            # compute slice reference x-position
+            alpha_img = np.zeros(det_dims)
+            alpha_img[(sliceMap == 100*int(band[0])+islice)] = alphaMap[(sliceMap == 100*int(band[0])+islice)]
+            x_coords = np.nonzero(alpha_img[512,:])[0]
+            alphas = alpha_img[512,:][x_coords]
+            xs = interp1d(alphas,x_coords)(0.)
+
+            VAR1[islice-1] = xs
+
+        VAR2 = {}
+        for var in range(25):
+            VAR2[str(var)] = np.zeros(nslices)
+            for islice in range(1,nslices+1):
+                # load new wavelength solution
+                wavsolution_file   = 'data/Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(islice)+'_coeffs.txt'
+                slice_wavcoeffs = np.loadtxt(wavsolution_file,unpack=True, skiprows = 5)
+
+                VAR2[str(var)][islice-1] = slice_wavcoeffs[var]
+
+        Lambda_CHX_new = np.rec.array([VAR1,VAR2['0'],VAR2['1'],VAR2['2'],VAR2['3'],VAR2['4'],VAR2['5'],VAR2['6'],
+                      VAR2['7'],VAR2['8'],VAR2['9'],VAR2['10'],VAR2['11'],VAR2['12'],VAR2['13'],VAR2['14'],
+                      VAR2['15'],VAR2['16'],VAR2['17'],VAR2['18'],VAR2['19'],VAR2['20'],VAR2['21'],VAR2['22'],VAR2['23'],VAR2['24']],
+                      dtype=[('VAR1', 'float64'), ('VAR2_0_0', 'float64'), ('VAR2_0_1', 'float64'), ('VAR2_0_2', 'float64'), ('VAR2_0_3', 'float64'), ('VAR2_0_4', 'float64'), 
+                             ('VAR2_1_0', 'float64'), ('VAR2_1_1', 'float64'), ('VAR2_1_2', 'float64'), ('VAR2_1_3', 'float64'), ('VAR2_1_4', 'float64'),
+                             ('VAR2_2_0', 'float64'), ('VAR2_2_1', 'float64'), ('VAR2_2_2', 'float64'), ('VAR2_2_3', 'float64'), ('VAR2_2_4', 'float64'),
+                             ('VAR2_3_0', 'float64'), ('VAR2_3_1', 'float64'), ('VAR2_3_2', 'float64'), ('VAR2_3_3', 'float64'), ('VAR2_3_4', 'float64'),
+                             ('VAR2_4_0', 'float64'), ('VAR2_4_1', 'float64'), ('VAR2_4_2', 'float64'), ('VAR2_4_3', 'float64'), ('VAR2_4_4', 'float64')])
+
+        # update corresponding fits extensions
+        old_distortion_cdp['Lambda_CH{}'.format(band[0])].data = Lambda_CHX_new
+
+    # save output
+    old_distortion_cdp.writeto(outDir + "MIRI_FM_MIR{}_DISTORTION_7B.06.00.fits".format(miri_setup),overwrite=True)
+
+
+# # Band 3B/4B
+
+# In[9]:
+
+wavecal_available = False
+miri_setup = 'IFULONG_34MEDIUM'
+# load old distortion cdp fits file
+old_distortion_cdp = fits.open(outDir+'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.format(miri_setup))
+
+# change headers
+old_distortion_cdp[0].header['DATE']     = datetime.datetime.utcnow().isoformat()
+old_distortion_cdp[0].header['FILENAME'] = 'MIRI_FM_MIR{}_DISTORTION_7B.06.00.fits'.format(miri_setup)
+old_distortion_cdp[0].header['VERSION']  = '7B.06.00'
+old_distortion_cdp[0].header['ORIGFILE'] = 'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.format(miri_setup)
+old_distortion_cdp[0].header.add_history("- updated wavelength extension Channel 1B,1C,2A,2B,2C -> DOCUMENT:")
+old_distortion_cdp[0].header.add_history("- MIRI-TN-00004-ETH, Alvaro Labiano and Ioannis Argyriou")
+
+# update the wavelength solution
+for band in ['3B','4B']:
+    if band == '3B': etal='ET2A'
+    elif band == '4B': etal='ET2B'
+    
+    if wavecal_available:
+        # number of slices in band
+        d2cMaps  = d2cMapping(band,cdpDir)
+        sliceMap = d2cMaps['sliceMap']
+        alphaMap = d2cMaps['alphaMap']
+        nslices  = d2cMaps['nslices']
+        det_dims  = (1024,1032)
+
+        # Create arrays of variables
+        VAR1 = np.zeros(nslices)
+        for islice in range(1,nslices+1):
+            # compute slice reference x-position
+            alpha_img = np.zeros(det_dims)
+            alpha_img[(sliceMap == 100*int(band[0])+islice)] = alphaMap[(sliceMap == 100*int(band[0])+islice)]
+            x_coords = np.nonzero(alpha_img[512,:])[0]
+            alphas = alpha_img[512,:][x_coords]
+            xs = interp1d(alphas,x_coords)(0.)
+
+            VAR1[islice-1] = xs
+
+        VAR2 = {}
+        for var in range(25):
+            VAR2[str(var)] = np.zeros(nslices)
+            for islice in range(1,nslices+1):
+                # load new wavelength solution
+                wavsolution_file   = 'data/Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(islice)+'_coeffs.txt'
+                slice_wavcoeffs = np.loadtxt(wavsolution_file,unpack=True, skiprows = 5)
+
+                VAR2[str(var)][islice-1] = slice_wavcoeffs[var]
+
+        Lambda_CHX_new = np.rec.array([VAR1,VAR2['0'],VAR2['1'],VAR2['2'],VAR2['3'],VAR2['4'],VAR2['5'],VAR2['6'],
+                      VAR2['7'],VAR2['8'],VAR2['9'],VAR2['10'],VAR2['11'],VAR2['12'],VAR2['13'],VAR2['14'],
+                      VAR2['15'],VAR2['16'],VAR2['17'],VAR2['18'],VAR2['19'],VAR2['20'],VAR2['21'],VAR2['22'],VAR2['23'],VAR2['24']],
+                      dtype=[('VAR1', 'float64'), ('VAR2_0_0', 'float64'), ('VAR2_0_1', 'float64'), ('VAR2_0_2', 'float64'), ('VAR2_0_3', 'float64'), ('VAR2_0_4', 'float64'), 
+                             ('VAR2_1_0', 'float64'), ('VAR2_1_1', 'float64'), ('VAR2_1_2', 'float64'), ('VAR2_1_3', 'float64'), ('VAR2_1_4', 'float64'),
+                             ('VAR2_2_0', 'float64'), ('VAR2_2_1', 'float64'), ('VAR2_2_2', 'float64'), ('VAR2_2_3', 'float64'), ('VAR2_2_4', 'float64'),
+                             ('VAR2_3_0', 'float64'), ('VAR2_3_1', 'float64'), ('VAR2_3_2', 'float64'), ('VAR2_3_3', 'float64'), ('VAR2_3_4', 'float64'),
+                             ('VAR2_4_0', 'float64'), ('VAR2_4_1', 'float64'), ('VAR2_4_2', 'float64'), ('VAR2_4_3', 'float64'), ('VAR2_4_4', 'float64')])
+
+        # update corresponding fits extensions
+        old_distortion_cdp['Lambda_CH{}'.format(band[0])].data = Lambda_CHX_new
+
+    # save output
+    old_distortion_cdp.writeto(outDir + "MIRI_FM_MIR{}_DISTORTION_7B.06.00.fits".format(miri_setup),overwrite=True)
+
+
+# # Band 3C/4C
+
+# In[10]:
+
+wavecal_available = False
+miri_setup = 'IFULONG_34LONG'
+# load old distortion cdp fits file
+old_distortion_cdp = fits.open(outDir+'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.format(miri_setup))
+
+# change headers
+old_distortion_cdp[0].header['DATE']     = datetime.datetime.utcnow().isoformat()
+old_distortion_cdp[0].header['FILENAME'] = 'MIRI_FM_MIR{}_DISTORTION_7B.06.00.fits'.format(miri_setup)
+old_distortion_cdp[0].header['VERSION']  = '7B.06.00'
+old_distortion_cdp[0].header['ORIGFILE'] = 'MIRI_FM_MIR{}_DISTORTION_7B.05.00.fits'.format(miri_setup)
+old_distortion_cdp[0].header.add_history("- updated wavelength extension Channel 1B,1C,2A,2B,2C -> DOCUMENT:")
+old_distortion_cdp[0].header.add_history("- MIRI-TN-00004-ETH, Alvaro Labiano and Ioannis Argyriou")
+
+# update the wavelength solution
+for band in ['3C','4C']:
+    if band == '3C': etal='ET2A'
+    elif band == '4C': etal='ET2B'
+    
+    if wavecal_available:
+        # number of slices in band
+        d2cMaps  = d2cMapping(band,cdpDir)
+        sliceMap = d2cMaps['sliceMap']
+        alphaMap = d2cMaps['alphaMap']
+        nslices  = d2cMaps['nslices']
+        det_dims  = (1024,1032)
+
+        # Create arrays of variables
+        VAR1 = np.zeros(nslices)
+        for islice in range(1,nslices+1):
+            # compute slice reference x-position
+            alpha_img = np.zeros(det_dims)
+            alpha_img[(sliceMap == 100*int(band[0])+islice)] = alphaMap[(sliceMap == 100*int(band[0])+islice)]
+            x_coords = np.nonzero(alpha_img[512,:])[0]
+            alphas = alpha_img[512,:][x_coords]
+            xs = interp1d(alphas,x_coords)(0.)
+
+            VAR1[islice-1] = xs
+
+        VAR2 = {}
+        for var in range(25):
+            VAR2[str(var)] = np.zeros(nslices)
+            for islice in range(1,nslices+1):
+                # load new wavelength solution
+                wavsolution_file   = 'data/Band'+str(band)+'_ET'+ etal[-2:] +'_slice'+str(islice)+'_coeffs.txt'
+                slice_wavcoeffs = np.loadtxt(wavsolution_file,unpack=True, skiprows = 5)
+
+                VAR2[str(var)][islice-1] = slice_wavcoeffs[var]
+
+        Lambda_CHX_new = np.rec.array([VAR1,VAR2['0'],VAR2['1'],VAR2['2'],VAR2['3'],VAR2['4'],VAR2['5'],VAR2['6'],
+                      VAR2['7'],VAR2['8'],VAR2['9'],VAR2['10'],VAR2['11'],VAR2['12'],VAR2['13'],VAR2['14'],
+                      VAR2['15'],VAR2['16'],VAR2['17'],VAR2['18'],VAR2['19'],VAR2['20'],VAR2['21'],VAR2['22'],VAR2['23'],VAR2['24']],
+                      dtype=[('VAR1', 'float64'), ('VAR2_0_0', 'float64'), ('VAR2_0_1', 'float64'), ('VAR2_0_2', 'float64'), ('VAR2_0_3', 'float64'), ('VAR2_0_4', 'float64'), 
+                             ('VAR2_1_0', 'float64'), ('VAR2_1_1', 'float64'), ('VAR2_1_2', 'float64'), ('VAR2_1_3', 'float64'), ('VAR2_1_4', 'float64'),
+                             ('VAR2_2_0', 'float64'), ('VAR2_2_1', 'float64'), ('VAR2_2_2', 'float64'), ('VAR2_2_3', 'float64'), ('VAR2_2_4', 'float64'),
+                             ('VAR2_3_0', 'float64'), ('VAR2_3_1', 'float64'), ('VAR2_3_2', 'float64'), ('VAR2_3_3', 'float64'), ('VAR2_3_4', 'float64'),
+                             ('VAR2_4_0', 'float64'), ('VAR2_4_1', 'float64'), ('VAR2_4_2', 'float64'), ('VAR2_4_3', 'float64'), ('VAR2_4_4', 'float64')])
+
+        # update corresponding fits extensions
+        old_distortion_cdp['Lambda_CH{}'.format(band[0])].data = Lambda_CHX_new
+
+    # save output
+    old_distortion_cdp.writeto(outDir + "MIRI_FM_MIR{}_DISTORTION_7B.06.00.fits".format(miri_setup),overwrite=True)
+
+
 # In[ ]:
 
 
